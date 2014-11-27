@@ -19,7 +19,9 @@ begin  -- RegDataUnit_Arch
 
   RegDataCtrl <= "0111" when RegDataSrc = "111" and CmpCode = '0' and zero = '0' else
                  "0111" when RegDataSrc = "111" and CmpCode = '1' and neg = '0' else
+                 -- op : !=
                  "1000" when RegDataSrc = "111" and CmpCode = '0' and zero = '1' else
+                 -- op : <
                  "1000" when RegDataSrc = "111" and CmpCode = '1' and neg = '1' else
                  "1111";
 
