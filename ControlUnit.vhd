@@ -37,9 +37,9 @@ begin  -- ControlUnit_Arch
   ALU_Src2 <= output(4 downto 3);
   RegDst <= output(2 downto 0);
 
-  process (instruc, ForceZero)
+  process (instruc)
   begin  -- process
-    if ForceZero = 1 then
+    if ForceZero = '1' then
       output <= (others => '0');
     else
       case instruc(15 downto 11) is
