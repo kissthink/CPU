@@ -178,8 +178,6 @@ START:
 	
 
 	
-
-	
 BEGIN:          ;检测命令
 	;接收字符，保存到r1
 	MFPC R7
@@ -191,7 +189,7 @@ BEGIN:          ;检测命令
 	SLL R6 R6 0x0000 
 	LW R6 R1 0x0000
 	LI R6 0x00ff 
-  AND R1 R6 
+	AND R1 R6 
 	NOP	
 	
 
