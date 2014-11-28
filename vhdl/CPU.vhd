@@ -32,6 +32,16 @@ end CPU;
 
 architecture CPU_Arch of CPU is
 
+  component PCMux
+    port (
+      CPU_CLK : in  std_logic;
+      PC_Src  : in  std_logic;
+      PC_New  : in  std_logic_vector(15 downto 0);
+      PC_1    : in  std_logic_vector(15 downto 0);
+      PC_Next : out std_logic_vector(15 downto 0)
+      );
+  end component;
+  
   component IM
     port (
       clk50     : in    std_logic;
@@ -95,6 +105,21 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
+  component PCUnit
+    port (
+      CPU_CLK     : in  std_logic;
+      BranchCtrl  : in  std_logic_vector(2 downto 0);
+      PC_1        : in  std_logic_vector(15 downto 0);
+      SignImm     : in  std_logic_vector(15 downto 0);
+      RxVal       : in  std_logic_vector(15 downto 0);
+      RtVal       : in  std_logic_vector(15 downto 0);
+      PC_New      : out std_logic_vector(15 downto 0);
+      PC_Src      : out std_logic;
+      Force_Nop   : out std_logic;
+      ID_EX_Clear : out std_logic
+      );
+  end component;
+
   component ALU
     port (
       op       : in  std_logic_vector(2 downto 0);
@@ -155,14 +180,17 @@ architecture CPU_Arch of CPU is
   signal CPU_CLK : std_logic;
   
   signal PC : std_logic_vector(15 downto 0) := X"0000";
-  signal PC_1 : std_logic_vector(15 downto 0);
+  signal PC_1 : std_logic_vector(15 downto 0) := X"0000";
+  signal PC_Src : std_logic := '0';
+  signal PC_New : std_logic_vector(15 downto 0);
   signal IF_ID_PC_1 : std_logic_vector(15 downto 0);
   signal IF_ID_Instruc : std_logic_vector(15 downto 0);
 
   signal RegWrite : std_logic := '0';
   signal Rd : std_logic_vector(3 downto 0);
   signal wData : std_logic_vector(15 downto 0);
-  signal ForceZero : std_logic := '0';
+  signal Force_Nop_B : std_logic := '0';
+  signal Force_Nop_L : std_logic := '0';
   signal ID_EX_PC_1 : std_logic_vector(15 downto 0);
   signal ID_EX_Rx : std_logic_vector(10 downto 8);
   signal ID_EX_Ry : std_logic_vector(7 downto 5);
@@ -185,6 +213,7 @@ architecture CPU_Arch of CPU is
   signal ID_EX_ALU_Src1 : std_logic_vector(1 downto 0);
   signal ID_EX_ALU_Src2 : std_logic_vector(1 downto 0);
   signal ID_EX_RegDst : std_logic_vector(2 downto 0);
+  signal ID_EX_Clear : std_logic := '0';
 
   signal operand1 : std_logic_vector(15 downto 0);
   signal operand2 : std_logic_vector(15 downto 0);
@@ -245,7 +274,14 @@ begin  -- CPU_Arch
 
   IF_ID_PC_1 <= PC_1;
 
-  PC <= PC_1;
+  PC_Mux : PCMUX
+    port map (
+      CPU_CLK => CPU_CLK,
+      PC_Src  => PC_Src,
+      PC_New  => PC_New,
+      PC_1    => PC_1,
+      PC_Next => PC
+      );
   
   InstrMem : IM
     port map (
@@ -305,7 +341,7 @@ begin  -- CPU_Arch
     port map (
       CPU_CLK    => CPU_CLK,
       instruc    => IF_ID_Instruc,
-      ForceZero  => ForceZero,
+      ForceZero  => Force_Nop_B or Force_Nop_L,
       RegWrite   => ID_EX_RegWrite,
       RegDataSrc => ID_EX_RegDataSrc,
       CmpCode    => ID_EX_CmpCode,
@@ -325,12 +361,12 @@ begin  -- CPU_Arch
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
-      EX_MEM_RegWrite <= ID_EX_RegWrite;
+      EX_MEM_RegWrite <= ID_EX_RegWrite and not ID_EX_Clear;
       EX_MEM_RegDataSrc <= ID_EX_RegDataSrc;
       EX_MEM_CmpCode <= ID_EX_CmpCode;
       EX_MEM_MemDataSrc <= ID_EX_MemDataSrc;
-      EX_MEM_MemRead <= ID_EX_MemRead;
-      EX_MEM_MemWrite <= ID_EX_MemWrite;
+      EX_MEM_MemRead <= ID_EX_MemRead and not ID_EX_Clear;
+      EX_MEM_MemWrite <= ID_EX_MemWrite and not ID_EX_Clear;
       EX_MEM_PC_1 <= ID_EX_PC_1;
       EX_MEM_RihVal <= ID_EX_RihVal;
       EX_MEM_RxVal <= ID_EX_RxVal;
@@ -404,6 +440,20 @@ begin  -- CPU_Arch
       end case;
     end if;
   end process;
+
+  PC_Unit : PCUnit
+    port map (
+      CPU_CLK     => CPU_CLK,
+      BranchCtrl  => ID_EX_BranchCtrl,
+      PC_1        => ID_EX_PC_1,
+      SignImm     => ID_EX_SignImm,
+      RxVal       => ID_EX_RxVal,
+      RtVal       => ID_EX_RtVal,
+      PC_New      => PC_New,
+      PC_Src      => PC_Src,
+      Force_Nop   => Force_Nop_B,
+      ID_EX_Clear => ID_EX_Clear
+      );
   
   ALU : ALU
     port map (
@@ -492,6 +542,7 @@ begin  -- CPU_Arch
   -- MEM / WB
   -----------------------------------------------------------------------------
 
+  -- out : wData
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
