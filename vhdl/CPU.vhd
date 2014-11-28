@@ -6,14 +6,15 @@ entity CPU is
   
   port (
     clk50     : in std_logic;           -- 50M
-    clk       : in std_logic;           -- single step
     rst       : in std_logic;
     
-    Ram1Addr  : out   std_logic_vector(17 downto 0);
-    Ram1Data  : inout std_logic_vector(15 downto 0);
-    Ram1OE    : out   std_logic;
-    Ram1RW    : out   std_logic;
-    Ram1EN    : out   std_logic;
+    input     : in   std_logic_vector(15 downto 0);
+    
+    --Ram1Addr  : out   std_logic_vector(17 downto 0);
+    --Ram1Data  : inout std_logic_vector(15 downto 0);
+    --Ram1OE    : out   std_logic;
+    --Ram1RW    : out   std_logic;
+    --Ram1EN    : out   std_logic;
     
     Ram2Addr  : out   std_logic_vector(17 downto 0);
     Ram2Data  : inout std_logic_vector(15 downto 0);
@@ -24,7 +25,6 @@ entity CPU is
     rdn       : out   std_logic;
     wrn       : out   std_logic;
 
-    input     : out   std_logic_vector(15 downto 0);
     output    : out   std_logic_vector(15 downto 0)
     );
 
@@ -34,7 +34,7 @@ architecture CPU_Arch of CPU is
 
   component IM
     port (
-      CPU_CLK   : in    std_logic;
+      clk50     : in    std_logic;
       PC        : in    std_logic_vector(15 downto 0);
       Ram2Addr  : out   std_logic_vector(17 downto 0);
       Ram2Data  : inout std_logic_vector(15 downto 0);
@@ -104,9 +104,13 @@ architecture CPU_Arch of CPU is
   signal IF_ID_Instruc : std_logic_vector(15 downto 0);
 
   signal RegWrite : std_logic := '0';
-  signal Rd : std_logic_vector(2 downto 0);
+  signal Rd : std_logic_vector(3 downto 0);
   signal wData : std_logic_vector(15 downto 0);
   signal ForceZero : std_logic := '0';
+  signal ID_EX_PC_1 : std_logic_vector(15 downto 0);
+  signal ID_EX_Rx : std_logic_vector(10 downto 8);
+  signal ID_EX_Ry : std_logic_vector(7 downto 5);
+  signal ID_EX_Rz : std_logic_vector(4 downto 2);
   signal ID_EX_RxVal : std_logic_vector(15 downto 0);
   signal ID_EX_RyVal : std_logic_vector(15 downto 0);
   signal ID_EX_RspVal : std_logic_vector(15 downto 0);
@@ -130,16 +134,18 @@ begin  -- CPU_Arch
 
   rdn <= '1';
   wrn <= '1';
-  output <= IF_ID_Instruc;
 
-  CPU_CLK <= clk;                       -- for test
+  output <= IF_ID_Instruc when input = X"0000" else
+            PC when input = X"0001" else
+            IF_ID_PC_1 when input = X"0002" else
+            (others => '1');
   
-  --process (clk50)
-  --begin  -- process
-  --  if rising_edge(clk50) then
-  --    CPU_CLK <= not CPU_CLK;
-  --  end if;
-  --end process;
+  process (clk50)
+  begin  -- process
+    if rising_edge(clk50) then
+      CPU_CLK <= not CPU_CLK;
+    end if;
+  end process;
 
   -----------------------------------------------------------------------------
   -- Start / IF
@@ -153,11 +159,12 @@ begin  -- CPU_Arch
   end process;
 
   IF_ID_PC_1 <= PC_1;
+
   PC <= PC_1;
   
   InstrMem : IM
     port map (
-      CPU_CLK  => CPU_CLK,
+      clk50  => clk50,
       PC       => PC,
       Ram2Addr => Ram2Addr,
       Ram2Data => Ram2Data,
