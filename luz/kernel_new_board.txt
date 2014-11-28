@@ -6,7 +6,7 @@ NOP
 ;0xBF10  0xBF11 BF12 0xBF13 BF14 0xBF15
 ; R0    R1   R2   R3   R4   R5  
 
-B START
+B START		;从start开始
 NOP
 
 DELINT:   ;中断处理程序
@@ -118,7 +118,7 @@ START:
 	LI R0 0x00BF 
 	SLL R0 R0 0x0000
 	ADDIU R0 0x10					;R0=0xBF10 
-	MTSP R0
+	MTSP R0							;SP = R0
 	NOP
 	
 	;用户寄存器值初始化
@@ -126,7 +126,7 @@ START:
 	SLL R6 R6 0x0000
 	ADDIU R6 0x10					;R6=0xBF10 
 	LI R0 0x0000
-	SW R6 R0 0x0000
+	SW R6 R0 0x0000					;BF00 - BF05 清零
 	SW R6 R0 0x0001
 	SW R6 R0 0x0002
 	SW R6 R0 0x0003
