@@ -55,6 +55,19 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
+  component HazardUnit
+    port (
+      ID_EX_Rx      : in  std_logic_vector(2 downto 0);
+      ID_EX_Ry      : in  std_logic_vector(2 downto 0);
+      ID_EX_RegDst  : in  std_logic_vector(2 downto 0);
+      ID_EX_MemRead : in  std_logic;
+      IF_ID_Rx      : in  std_logic_vector(2 downto 0);
+      IF_ID_Ry      : in  std_logic_vector(2 downto 0);
+      Force_Nop     : out std_logic;
+      IF_ID_Keep    : out std_logic
+      );
+  end component;
+  
   component RegisterFile
     port (
       CPU_CLK  : in  std_logic;
@@ -180,11 +193,14 @@ architecture CPU_Arch of CPU is
   signal CPU_CLK : std_logic;
   
   signal PC : std_logic_vector(15 downto 0) := X"0000";
+  signal PC_tmp : std_logic_vector(15 downto 0) := X"0000";
   signal PC_1 : std_logic_vector(15 downto 0) := X"0000";
   signal PC_Src : std_logic := '0';
   signal PC_New : std_logic_vector(15 downto 0);
   signal IF_ID_PC_1 : std_logic_vector(15 downto 0);
   signal IF_ID_Instruc : std_logic_vector(15 downto 0);
+  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0);
+  signal IF_ID_Keep : std_logic = '0';
 
   signal RegWrite : std_logic := '0';
   signal Rd : std_logic_vector(3 downto 0);
@@ -272,7 +288,9 @@ begin  -- CPU_Arch
     end if;
   end process;
 
-  IF_ID_PC_1 <= PC_1;
+  IF_ID_PC_1 <= PC_1 when IF_ID_Keep = '0';
+  PC <= PC_tmp when IF_ID_Keep = '0';
+  IF_ID_Instruc <= IF_ID_Instruc_tmp when IF_ID_Keep = '0';
 
   PC_Mux : PCMUX
     port map (
@@ -280,7 +298,7 @@ begin  -- CPU_Arch
       PC_Src  => PC_Src,
       PC_New  => PC_New,
       PC_1    => PC_1,
-      PC_Next => PC
+      PC_Next => PC_tmp
       );
   
   InstrMem : IM
@@ -292,7 +310,7 @@ begin  -- CPU_Arch
       Ram2OE   => Ram2OE,
       Ram2RW   => Ram2RW,
       Ram2EN   => Ram2EN,
-      instruc  => IF_ID_Instruc
+      instruc  => IF_ID_Instruc_tmp
       );
   -----------------------------------------------------------------------------
   -- IF / ID
@@ -307,6 +325,18 @@ begin  -- CPU_Arch
       ID_EX_Rz <= IF_ID_Instruc(4 downto 2);
     end if;
   end process;
+
+  Hazard_Unit : HazardUnit
+    port map (
+      ID_EX_Rx      => ID_EX_Rx,
+      ID_EX_Ry      => ID_EX_Ry,
+      ID_EX_RegDst  => ID_EX_RegDst,
+      ID_EX_MemRead => ID_EX_MemRead,
+      IF_ID_Rx      => IF_ID_Rx,
+      IF_ID_Ry      => IF_ID_Ry,
+      Force_Nop     => Force_Nop_L,
+      IF_ID_Keep    => IF_ID_Keep
+      );
   
   RegFile : RegisterFile
     port map (

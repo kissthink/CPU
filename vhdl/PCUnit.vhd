@@ -23,6 +23,9 @@ architecture PCUnit_Arch of PCUnit is
 
 begin  -- PCUnit_Arch
 
+  Force_Nop <= PC_Src;
+  ID_EX_Clear <= PC_Src;
+  
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
