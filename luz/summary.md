@@ -1,4 +1,4 @@
-+ kernel的概括：
+# kernel的概括：
 	+ B start 
 		- 从start开始，因此先跳过第一个模块——DELINT（中断处理）
 		
