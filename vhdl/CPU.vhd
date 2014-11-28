@@ -492,5 +492,31 @@ begin  -- CPU_Arch
   -- MEM / WB
   -----------------------------------------------------------------------------
 
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      case MEM_WB_RegDataCtrl is
+        when "0000" =>
+          wData <= MEM_WB_ALU_Result;
+        when "0001" =>
+          wData <= MEM_WB_MemOutput;
+        when "0010" =>
+          wData <= MEM_WB_PC_1;
+        when "0011" =>
+          wData <= MEM_WB_RihVal;
+        when "0100" =>
+          wData <= MEM_WB_RxVal;
+        when "0101" =>
+          wData <= MEM_WB_RyVal;
+        when "0110" =>
+          wData <= MEM_WB_ZeroImm;
+        when "0111" =>
+          wData <= X"0000";
+        when "1000" =>
+          wData <= X"0001";
+        when others => null;
+      end case;
+    end if;
+  end process;
   
 end CPU_Arch;
