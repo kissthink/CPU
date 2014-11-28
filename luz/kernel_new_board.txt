@@ -6,6 +6,8 @@ NOP
 ;0xBF10  0xBF11 BF12 0xBF13 BF14 0xBF15
 ; R0    R1   R2   R3   R4   R5  
 
+;R7是函数开始地址
+
 B START		;从start开始
 NOP
 
@@ -13,23 +15,22 @@ DELINT:   ;中断处理程序
 	NOP
 	NOP
 	NOP
-	;保存用户程序现场，保存R0，R1，R2
-	LI R6 0xBF				;调用函数地址
-	SLL R6 R6 0x0000		;左移8位
-	ADDIU R6 0x10			;R6=0xBF10
-	SW R6 R0 0x0000			;MEM[R6+0]=R0
-	SW R6 R1 0x0001			;MEM[R6+1]=R1
-	SW R6 R2 0x0002			;MEM[R6+2]=R2
 	
-
+	;保存用户程序现场，保存R0，R1，R2到BF10，BF11，BF12
+	LI R6 0xBF
+	SLL R6 R6 0x0000
+	ADDIU R6 0x10		;R6 = 0xBF10
+	SW R6 R0 0x0000
+	SW R6 R1 0x0001
+	SW R6 R2 0x0002
 	
 
 	
 	;R1=中断号
-	LW_SP R1 0x0000		;R1=MEM[SP+0]
-	ADDSP 0x0001		;SP=SP+1，相当于弹出栈
-	LI R0 0x00FF		;R0=31
-	AND R1 R0		;R1=R1&R0，中断号储存在栈顶，只能是31以内的
+	LW_SP R1 0x0000		;R1 = MEM[SP+0]
+	ADDSP 0x0001		;SP = SP+1，相当于弹出栈
+	LI R0 0x00FF
+	AND R1 R0			;取R1低八位，中断号储存在栈顶，只能是31以内的
 	
 	;R2=应用程序的pc
 	LW_SP R2 0x0000		;R2=MEM[SP+0]，弹出栈
@@ -39,28 +40,29 @@ DELINT:   ;中断处理程序
 	ADDSP 0xFFFF		;SP=SP-1，压栈
 	SW_SP R3 0x0000		;MEM[SP+0]=R3
 
-
-	
 	;保存用户程序返回地址
 	ADDSP 0xFFFF		;SP=SP-1，压栈
 	SW_SP R7 0x0000		;MEM[SP+0]=R7
 	
+	
+	
 	;提示终端，进入中断处理
-	LI R3 0x000F		;R3=15
-	MFPC R7 		;R7=PC
-	ADDIU R7 0x0003  	;R7=R7+3
+	LI R3 0x000F
+	MFPC R7
+	ADDIU R7 0x0003
 	NOP			
-	B TESTW 		;跳到这个函数
+	B TESTW 			;看8251是否可写，和上面3行是共生的
 	NOP	
-	LI R6 0x00BF 			;R6=BF
+	LI R6 0x00BF
 	SLL R6 R6 0x0000 	;R6=0xBF00
-	SW R6 R3 0x0000		;MEM[R6+0]=R3
+	SW R6 R3 0x0000		;MEM[BF00]=R3，R3=15，启用切换。向BF00输入一个0x000F，就是提示终端的意思...
 	NOP
+	
 	;输出中断号
-	MFPC R7 		;R7=PC
-	ADDIU R7 0x0003  	;R7+=3
-	NOP	
-	B TESTW 			
+	MFPC R7
+	ADDIU R7 0x0003
+	NOP
+	B TESTW	
 	NOP
 	LI R6 0x00BF 
 	SLL R6 R6 0x0000 	;R6=0xBF00 
@@ -75,23 +77,24 @@ DELINT:   ;中断处理程序
 	B TESTW 	
 	NOP
 	LI R6 0x00BF 
-	SLL R6 R6 0x0000 ;R6=0xBF00 
-	SW R6 R3 0x0000
+	SLL R6 R6 0x0000 	;R6=0xBF00 
+	SW R6 R3 0x0000		;0x000F--SI (shift in)
 	NOP
 	
 	;R6保存返回地址
 	ADDIU3 R2 R6 0x0000
 	
-	;用r3=IH（高位变成1）
+	
+	;用r3=IH（高位变成1），又是中断？
 	MFIH R3
 	LI R0 0x0080
 	SLL R0 R0 0x000
 	OR R3 R0
 	
-	;恢复现场
+	;恢复现场，恢复R1，R2，R3
 	LI R7 0xBF
 	SLL R7 R7 0x0000
-	ADDIU R7 0x10					;R7=0xBF10
+	ADDIU R7 0x10			;R7=0xBF10
 	LW R7 R0 0x0000
 	LW R7 R1 0x0001
 	LW R7 R2 0x0002
@@ -104,7 +107,7 @@ DELINT:   ;中断处理程序
 	NOP
 	MTIH R3;
 	JR R6
-	LW_SP R3 0x00FF
+	LW_SP R3 0x00FF		;这...在这里恢复R3，可以解释前面两个出栈的行为
 	
 	NOP	
 
@@ -118,7 +121,7 @@ START:
 	LI R0 0x00BF 
 	SLL R0 R0 0x0000
 	ADDIU R0 0x10					;R0=0xBF10 
-	MTSP R0							;SP = R0
+	MTSP R0							;SP = R0，栈顶位置
 	NOP
 	
 	;用户寄存器值初始化
@@ -126,7 +129,7 @@ START:
 	SLL R6 R6 0x0000
 	ADDIU R6 0x10					;R6=0xBF10 
 	LI R0 0x0000
-	SW R6 R0 0x0000					;BF00 - BF05 清零
+	SW R6 R0 0x0000					;BF10 - BF15 清零
 	SW R6 R0 0x0001
 	SW R6 R0 0x0002
 	SW R6 R0 0x0003
@@ -134,47 +137,49 @@ START:
 	SW R6 R0 0x0005
 		
 	;WELCOME
+	;判断8251是否可写，然后输出字符'0'
+	MFPC R7 
+	ADDIU R7 0x0003  		;R7 = PC+3
+	NOP
+	B TESTW 				;8251是否可写
+	LI R6 0x00BF 
+	SLL R6 R6 0x0000 		;R6 = BF00
+	LI R0 0x004F			;R0 = 4F	64+15=79--'O'
+	SW R6 R0 0x0000			;MEM[BF00] = [R0]
+	NOP
+	
+	;输出字符'K'
+	MFPC R7 
+	ADDIU R7 0x0003  		;R7 = PC + 3
+	NOP
+	B TESTW 				;8251是否可写
+	LI R6 0x00BF 
+	SLL R6 R6 0x0000 		;BF00
+	LI R0 0x004B			;64+11 = 75 -- 'K'
+	SW R6 R0 0x0000
+	NOP	
+	
+	;换行
+	MFPC R7 
+	ADDIU R7 0x0003  		;R7 = PC + 3
+	NOP
+	B TESTW 	
+	LI R6 0x00BF 
+	SLL R6 R6 0x0000 
+	LI R0 0x000A			;换行
+	SW R6 R0 0x0000
+	NOP	
+	
+	;回车
 	MFPC R7 
 	ADDIU R7 0x0003  
 	NOP
 	B TESTW 	
 	LI R6 0x00BF 
 	SLL R6 R6 0x0000 
-	LI R0 0x004F
+	LI R0 0x000D			;回车
 	SW R6 R0 0x0000
 	NOP
-	
-	MFPC R7 
-	ADDIU R7 0x0003  
-	NOP
-	B TESTW 	
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 
-	LI R0 0x004B
-	SW R6 R0 0x0000
-	NOP
-	
-	MFPC R7 
-	ADDIU R7 0x0003  
-	NOP
-	B TESTW 	
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 
-	LI R0 0x000A
-	SW R6 R0 0x0000
-	NOP
-	
-	MFPC R7 
-	ADDIU R7 0x0003  
-	NOP
-	B TESTW 	
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 
-	LI R0 0x000D
-	SW R6 R0 0x0000
-	NOP
-	
-
 	
 
 	
@@ -182,55 +187,66 @@ START:
 	
 BEGIN:          ;检测命令
 	;接收字符，保存到r1
-	MFPC R7			;R7=PC
-	ADDIU R7 0x0003		;R7+=3
-	NOP	
-	B TESTR			;跳到testr
+	MFPC R7
+	ADDIU R7 0x0003		;R7 = PC + 3，调用TESTR返回地址。注意PC的位置，+3会恰好跳过下面的TESTR
 	NOP
-	LI R6 0x00BF 		;R6=BF
-	SLL R6 R6 0x0000 	;R6=BF00
-	LW R6 R1 0x0000		;R1=MEM[R6+0]
-	LI R6 0x00ff 		;R6=ff
-  	AND R1 R6 		;R1=R1&R6 ..明白，ascii码是8位的
+	B TESTR				;检测8251是否可读
+	NOP
+	LI R6 0x00BF
+	SLL R6 R6 0x0000 	;R6 = BF00
+	LW R6 R1 0x0000		;R1 = MEM[BF00]
+	LI R6 0x00ff 		;R6 = ff
+  	AND R1 R6 			;R1 = R1&R6 ..明白，ascii码是8位的
 	NOP	
 	
 
-	;检测是否为R命令		
+	;检测是否为R命令
+	;查看寄存器R0-R5的值
 	LI R0 0x0052
 	CMP R0 R1
-	BTEQZ SHOWREGS		;T==0 show
-	NOP	
+	BTEQZ SHOWREGS
+	NOP
+	
 	;检测是否为D命令
+	;D [addr] [num]，查看由地址开始的num个内存字的值
+	;默认addr=0x4000，num = 0x0A
 	LI R0 0x0044
 	CMP R0 R1
 	BTEQZ SHOWMEM
 	NOP	
 	
 	;检测是否为A命令
+	;A [addr]，修改地址addr处的值
 	LI R0 0x0041
 	CMP R0 R1
 	BTEQZ GOTOASM
 	NOP	
 	
 	;检测是否为U命令
+	;U [addr] [num]，反汇编地址addr开始的num个内存字的值
 	LI R0 0x0055
 	CMP R0 R1
 	BTEQZ GOTOUASM
-	NOP	
+	NOP
+	
 	;检测是否为G命令
+	;G [addr]，从地址addr处开始连续执行用户程序
 	LI R0 0x0047
 	CMP R0 R1
 	BTEQZ GOTOCOMPILE
 	NOP		
 	
+	;不停地接收命令...，递归？while(1){}？
 	B BEGIN
 	NOP
 
 ;各处理块的入口
+;--可是为什么之前不直接跳转呢？
 GOTOUASM:
 	NOP
 	B UASM
 	NOP
+	
 GOTOASM:
 	NOP
 	B ASM
@@ -243,38 +259,41 @@ GOTOCOMPILE:
   
 	
 ;测试8251是否能写
+;判断BF01最低位，为0则等待；为1，可写。
+;BF01 -- 状态寄存器
 TESTW:	
 	NOP	 		
 	LI R6 0x00BF 		
 	SLL R6 R6 0x0000 	
-	ADDIU R6 0x0001 	;BF01
-	LW R6 R0 0x0000 	;R0=MEM[R6]
-	LI R6 0x0001 		;R6=1
-	AND R0 R6 			;R0&=R6
-	BEQZ R0 TESTW     	;BF01&1=0则等待；如果BF01==1，返回！
-	NOP			
-	JR R7			
+	ADDIU R6 0x0001 	;R6 = BF01
+	LW R6 R0 0x0000 	;R0 = MEM[BF01]
+	LI R6 0x0001 		;R6 = 1
+	AND R0 R6 			;R0 &= R6
+	BEQZ R0 TESTW     	;BF01&1==0则等待；如果BF01==1，返回！
+	NOP					
+	JR R7				
 	NOP 
 	
 
 	
 ;测试8251是否能读
+;判断BF01的倒数第2位是否为1，为1可读；不为1等待
 TESTR:	
 	NOP	
 	LI R6 0x00BF
 	SLL R6 R6 0x0000
-	ADDIU R6 0x0001 	;R6=BF01
-	LW R6 R0 0x0000 	;R0=MEM[R6]
-	LI R6 0x0002		;R6=2
-	AND R0 R6 		;R0&=R6
-	BEQZ R0 TESTR   	;BF01&2=0  则等待--这什么意思？应该是才可读
-	NOP			;如果BF01==2，可读
-	JR R7			;如果BF01==1，不可读
+	ADDIU R6 0x0001 	;R6 = BF01
+	LW R6 R0 0x0000 	;R0 = MEM[BF01]
+	LI R6 0x0002		;R6 = 2
+	AND R0 R6 			;R0 &= R6
+	BEQZ R0 TESTR   	;BF01&2 == 0  则等待
+	NOP					;如果BF01==2，可读
+	JR R7
 	NOP 		
 	
 	
 SHOWREGS:    ;R命令，打印R0-R5
-	LI R1 0x0006  		;R1递减  
+	LI R1 0x0006  		;R1递减
 	LI R2 0x0006   		;R2不变
 	
 LOOP:
@@ -286,17 +305,18 @@ LOOP:
 	LW R0 R3 0x0000    	;R3=用户程序的 R0,R1,R2	
 
 	;发送低八位
-	MFPC R7			;R7=PC
+	MFPC R7				;R7=PC
 	ADDIU R7 0x0003		
 	NOP			
-	B TESTW			;测试是否可写
+	B TESTW				;测试是否可写
 	NOP	
 	LI R6 0x00BF 		
 	SLL R6 R6 0x0000 	;R6=BF00	
 	SW R6 R3 0x0000		;MEM[R6]=R3，把寄存器的值放到串口处，应该就是输出了，word是低八位
+	
 	;发送高八位
 	SRA R3 R3 0x0000	;R3>>8
-	MFPC R7			;R7=PC
+	MFPC R7				;R7=PC
 	ADDIU R7 0x0003		;R7+=3
 	NOP
 	B TESTW			
@@ -304,8 +324,10 @@ LOOP:
 	LI R6 0x00BF 		
 	SLL R6 R6 0x0000 	;R6=0xBF00	
 	SW R6 R3 0x0000		;MEM[R6]=R3，取得高八位
+						;存储的时候，好像只能存一个字节...SW就是这个意思？
+						;寄存器是16位的，但是SW只能传1个字节？
 	
-	ADDIU R1 0xFFFF
+	ADDIU R1 0xFFFF		;R1--;
 	NOP
 	BNEZ R1 LOOP
 	NOP	
@@ -317,18 +339,21 @@ LOOP:
 	
 
 	
-SHOWMEM:  ;查看内存	
+SHOWMEM:  ;查看内存
+	;D [addr] [num]，如果有num，addr是一定要有的
+	;说了有默认值，并没有感觉到啊...默认值：addr = 0x4000, num = 0x0A
+	;读取addr
 	;D读取地址低位到r5
-	MFPC R7			;PC=R7
-	ADDIU R7 0x0003		;R7+=3 --返回地址
+	MFPC R7
+	ADDIU R7 0x0003		;R7 = PC + 7
 	NOP
-	B TESTR	
+	B TESTR				;8251是否可读
 	NOP
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 	;R6=BF00
-	LW R6 R5 0x0000		;R5=MEM[R6]
-	LI R6 0x00FF		;R6=FF
-	AND R5 R6		;R5&=R6 --ascii码
+	LI R6 0x00BF
+	SLL R6 R6 0x0000 	;R6 = BF00
+	LW R6 R5 0x0000		;R5 = MEM[BF00]
+	LI R6 0x00FF		;R6 = FF
+	AND R5 R6			;R5 &= R6 --获取地址低八位
 	NOP	
 	
 	;读取地址高位到r1
@@ -337,77 +362,80 @@ SHOWMEM:  ;查看内存
 	NOP	
 	B TESTR	
 	NOP
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 
-	LW R6 R1 0x0000		;R1=MEM[R6]
+	LI R6 0x00BF		;关于如何把东西传给BF00比较疑惑...
+	SLL R6 R6 0x0000 	;R6 = BF00
+	LW R6 R1 0x0000		;R1 = MEM[BF00]
 	LI R6 0x00FF
-	AND R1 R6		;R1&=R6
-	NOP	
+	AND R1 R6			;R1 &= R6 --这就是高八位？
+	NOP
 	
-	
-	
+		
 	;R1存储地址
 	SLL R1 R1 0x0000
-	OR R1 R5
+	OR R1 R5			;将R1和R5拼起来
 	
-	;读取显示次数低位到R5
+	;读取显示次数低位到R5，和读取地址类似
 	MFPC R7
 	ADDIU R7 0x0003	
 	NOP	
 	B TESTR	
 	NOP
 	LI R6 0x00BF 
-	SLL R6 R6 0x0000 
-	LW R6 R5 0x0000
+	SLL R6 R6 0x0000
+	LW R6 R5 0x0000		;难道说与串口通信时，每次只能读写8位？
 	LI R6 0x00FF
-	AND R5 R6
-	NOP	
+	AND R5 R6			;那这个时候MEM[BF00]中到底是什么样子？
+	NOP
+	
 	;读取显示次数高位到R2
 	MFPC R7
-	ADDIU R7 0x0003	
+	ADDIU R7 0x0003
 	NOP	
-	B TESTR	
+	B TESTR
 	NOP
 	LI R6 0x00BF 
 	SLL R6 R6 0x0000 
 	LW R6 R2 0x0000
 	LI R6 0x00FF
 	AND R2 R6
-	NOP	
+	NOP
+	
 	;R2保存内存个数
 	SLL R2 R2 0x0000
 	OR R2 R5
 
 	
-	;循环发出	
+	;循环发出
 	
+	
+	;R1是起始内存地址，R2是要查看的内存数
 MEMLOOP:		
 	
-	LW R1 R3 0x0000    ;R3为内存数据	
+	LW R1 R3 0x0000    	;R3为内存数据，取了16位
 
 	;发送低八位
 	MFPC R7
-	ADDIU R7 0x0003	
+	ADDIU R7 0x0003
 	NOP
-	B TESTW	
+	B TESTW				;看8251是否可写
 	NOP	
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 ;R6=0xBF00	
-	SW R6 R3 0x0000	
+	LI R6 0x00BF
+	SLL R6 R6 0x0000	;R6 = 0xBF00	
+	SW R6 R3 0x0000		;这个指令只能存8位？
+	
 	;发送高八位
-
 	SRA R3 R3 0x0000
 	MFPC R7
-	ADDIU R7 0x0003	
+	ADDIU R7 0x0003
 	NOP
 	B TESTW	
 	NOP	
 	LI R6 0x00BF 
-	SLL R6 R6 0x0000 ;R6=0xBF00	
-	SW R6 R3 0x0000	
+	SLL R6 R6 0x0000 	;R6 = 0xBF00	
+	SW R6 R3 0x0000		
 	
-	ADDIU R1 0x0001   ;R1=地址加加加
-	ADDIU R2 0xFFFF
+	ADDIU R1 0x0001   	;R1++，地址++
+	ADDIU R2 0xFFFF		;R2--，要查看的内存数--
 	NOP
 	BNEZ R2 MEMLOOP
 	NOP	
@@ -417,19 +445,24 @@ MEMLOOP:
 
 
  ;汇编	
-ASM:  
-	;A命令读取地址低位到r5
+ASM:
+	;格式：A [addr]
+	;功能：修改地址addr处的值
+	;它的默认值是0x4000，如果addr为空，返回begin
+	
+	;A命令读取地址低位到r5	--和上面都一样
 	MFPC R7
 	ADDIU R7 0x0003	
 	NOP	
-	B TESTR	
+	B TESTR				;看8251是否可读
 	NOP
 	LI R6 0x00BF 
 	SLL R6 R6 0x0000 
 	LW R6 R5 0x0000
 	LI R6 0x00FF
 	AND R5 R6
-	NOP	
+	NOP
+	
 	;读取地址高位到r1
 	MFPC R7
 	ADDIU R7 0x0003	
@@ -446,11 +479,9 @@ ASM:
 	;R1存储地址
 	SLL R1 R1 0x0000
 	OR R1 R5
-	
-	
-	
-	
-	;检测地址是否合法
+
+
+	;检测地址是否合法，只要不为空都合法
 	LI R0 0x0000
 	CMP R0 R1      
   	BTEQZ GOTOBEGIN
@@ -460,10 +491,10 @@ ASM:
 	;读取数据低位到R5
 	MFPC R7
 	ADDIU R7 0x0003	
-	NOP	
-	B TESTR	
 	NOP
-	LI R6 0x00BF 
+	B TESTR
+	NOP
+	LI R6 0x00BF
 	SLL R6 R6 0x0000 
 	LW R6 R5 0x0000
 	LI R6 0x00FF
@@ -483,14 +514,16 @@ ASM:
 	LI R6 0x00FF
 	AND R2 R6
 	NOP	
+	
 	;R2保存数据
 	SLL R2 R2 0x0000
 	OR R2 R5
-			
-	SW R1 R2 0x0000	
+
+	;把数据存到刚刚给定的地址中		
+	SW R1 R2 0x0000
 	NOP
 	
-	B ASM
+	B ASM	;然后继续往下？可是addr没有了啊...
 	NOP
 	
 GOTOBEGIN:
@@ -503,10 +536,13 @@ GOTOBEGIN:
 	
 ;反汇编：将需要反汇编的地址处的值发给终端处理	
 UASM:
+	;格式：U [addr] [num]
+	;功能：反汇编地址addr开始的num个内存字的值
+	
 	;读取地址低位到r5
 	MFPC R7
 	ADDIU R7 0x0003	
-	NOP	
+	NOP
 	B TESTR	
 	NOP
 	LI R6 0x00BF 
@@ -514,7 +550,8 @@ UASM:
 	LW R6 R5 0x0000
 	LI R6 0x00FF
 	AND R5 R6
-	NOP	
+	NOP
+	
 	;读取地址高位到r1
 	MFPC R7
 	ADDIU R7 0x0003	
@@ -545,7 +582,8 @@ UASM:
 	LW R6 R5 0x0000
 	LI R6 0x00FF
 	AND R5 R6
-	NOP	
+	NOP
+	
 	;读取显示次数高位到R2
 	MFPC R7
 	ADDIU R7 0x0003	
@@ -558,6 +596,7 @@ UASM:
 	LI R6 0x00FF
 	AND R2 R6
 	NOP	
+	
 	;R2保存内存个数
 	SLL R2 R2 0x0000
 	OR R2 R5
@@ -567,7 +606,7 @@ UASM:
 	
 UASMLOOP:		
 	
-	LW R1 R3 0x0000    ;R3为内存数据	
+	LW R1 R3 0x0000    	;R3为内存数据	
 
 	;发送低八位
 	MFPC R7
@@ -576,55 +615,61 @@ UASMLOOP:
 	B TESTW	
 	NOP	
 	LI R6 0x00BF 
-	SLL R6 R6 0x0000 ;R6=0xBF00	
+	SLL R6 R6 0x0000 	;R6 = 0xBF00	
 	SW R6 R3 0x0000	
+	
 	;发送高八位
-
 	SRA R3 R3 0x0000
 	MFPC R7
 	ADDIU R7 0x0003	
 	NOP
 	B TESTW	
-	NOP	
+	NOP
 	LI R6 0x00BF 
-	SLL R6 R6 0x0000 ;R6=0xBF00	
+	SLL R6 R6 0x0000 	;R6 = 0xBF00	
 	SW R6 R3 0x0000	
 	
-	ADDIU R1 0x0001   ;R1=地址加加加
-	ADDIU R2 0xFFFF
+	ADDIU R1 0x0001   	;R1 = addr ++
+	ADDIU R2 0xFFFF		;R2 = num --
 	NOP
 	BNEZ R2 UASMLOOP
 	NOP	
 
 	B BEGIN
 	NOP			
+
 	
 ;连续执行
 COMPILE:
+	;格式：G [addr]
+	;功能：从地址addr处开始连续执行用户程序
+	
 	;读取地址低位到R5
 	MFPC R7
-	ADDIU R7 0x0003	
-	NOP	
-	B TESTR	
+	ADDIU R7 0x0003
 	NOP
-	LI R6 0x00BF 
-	SLL R6 R6 0x0000 
+	B TESTR
+	NOP
+	LI R6 0x00BF
+	SLL R6 R6 0x0000
 	LW R6 R5 0x0000
 	LI R6 0x00FF
 	AND R5 R6
-	NOP	
-	;读取内存高位到R2
+	NOP
+	
+	;读取地址高位到R2
 	MFPC R7
-	ADDIU R7 0x0003	
-	NOP	
-	B TESTR	
+	ADDIU R7 0x0003
+	NOP
+	B TESTR
 	NOP
 	LI R6 0x00BF 
 	SLL R6 R6 0x0000 
 	LW R6 R2 0x0000
 	LI R6 0x00FF
 	AND R2 R6
-	NOP	
+	NOP
+	
 	;R2保存内存地址  传给r6
 	SLL R2 R2 0x0000
 	OR R2 R5
@@ -633,22 +678,22 @@ COMPILE:
 	
 	LI R7 0x00BF
 	SLL R7 R7 0x0000
-	ADDIU R7 0x0010
+	ADDIU R7 0x0010		;R7 = BF10
 	
-	LW R7 R5 0x0005
-	ADDSP 0xFFFF
-	SW_SP R5 0x0000
+	LW R7 R5 0x0005		;R5 = MEM[BF15]
+	ADDSP 0xFFFF		;
+	SW_SP R5 0x0000		;把R5压栈
 	
 	
 	;中断保存在R5中
 	MFIH R5
 	LI R1 0x0080
-	SLL R1 R1 0x000
-	OR R5 R1
+	SLL R1 R1 0x000		;R1 = 0x8000
+	OR R5 R1			;R5 = R1 || R5，R5高位赋1，中断开启
 	
 	
 	
-	;恢复现场
+	;恢复现场，把BF10-BF15中的值给R0-R5，其中R5是中断寄存器，高位赋1
 	LW R7 R0 0x0000
 	LW R7 R1 0x0001
 	LW R7 R2 0x0002
@@ -659,14 +704,14 @@ COMPILE:
 	
 	MFPC R7
 	ADDIU R7 0x0004
-	MTIH R5    ;IH高位赋1	
-	JR R6
-	LW_SP R5 0x0000  ;R5恢复现场
+	MTIH R5    			;IH高位赋1	
+	JR R6				;调到addr去执行程序
+	LW_SP R5 0x0000 	;R5恢复现场
 	
 	;用户程序执行完毕，返回kernel，保存现场
 	NOP
 	NOP
-	ADDSP 0x0001
+	ADDSP 0x0001		;出栈
 	LI R7 0x00BF
 	SLL R7 R7 0x0000
 	ADDIU R7 0x0010
@@ -695,8 +740,8 @@ COMPILE:
 	B TESTW	
 	NOP	
 	LI R6 0x00BF 
-	SLL R6 R6 0x0000 ;R6=0xBF00	
-	SW R6 R1 0x0000		
+	SLL R6 R6 0x0000 	;R6=0xBF00	
+	SW R6 R1 0x0000		;好像是响铃！07--BEL
 	B BEGIN
 	NOP	
 		

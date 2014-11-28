@@ -1,51 +1,3 @@
-地址划分：
-
-	系统程序区：0x0000~0x3FFF,16K
-	用户程序区：0x4000~0x7FFF,16K
-	
-	系统数据区：0x8000~0xBEFF,16K
-	用户数据区：0xC000~0xFFFF,16K
-	
-	串口1数据寄存器：0xBF00
-	串口1状态寄存器：0xBF01
-	串口2数据寄存器：0xBF02
-	串口2状态寄存器：0xBF03
-	
-	
-指令格式与含义：
-	ADDIU		01001 Rx IMM(8)			[Rx] = [Rx] + Sign(IMM)
-	ADDIU3		01000 Rx Ry 0 IMM(4)	[Ry] = [Rx] + Sign(IMM)
-	ADDSP		01100 011 IMM(8)		[SP] = [SP] + Sign(IMM)
-	ADDU		11100 Rx Ry Rz 01		[Rz] = [Rx] + [Ry]
-	AND			11101 Rx Ry 01100		[Rx] = [Rx] & [Ry]
-	B			00010 IMM(11)			PC = PC + Sign(IMM)
-	BEQZ		00100 Rx IMM(8)			[Rx] = 0 : PC = PC + Sign(IMM)
-	BNEZ		00101 Rx IMM(8)			[Rx] /= 0: PC = PC + Sign(IMM)
-	BTEQZ		01100 000 IMM(8)		[T] = 0 : PC = PC + Sign(IMM)
-	CMP			11101 Rx Ry 01010		[T] = ([Rx] /= [Ry])
-	JR			11101 Rx 00000000		PC = [Rx]
-	LI			01101 Rx IMM(8)			[Rx] = Zero(IMM)
-	LW			10011 Rx Ry IMM(5)		[Ry] = MEM([Rx] + Sign(IMM))
-	LW_SP		10010 Rx IMM(8)			[Rx] = MEM([SP] + Sign(IMM))
-	MFIH		11110 Rx 00000000		[Rx] = [IH]
-	MFPC		11101 Rx 01000000		[Rx] = PC
-	MTIH		11110 Rx 00000001		[IH] = [Rx]
-	MTSP		01100 100 Ry 00000		[SP] = [Ry]
-	NOP			00001 000 000 00000000	Do Nothing
-	OR			11101 Rx Ry 01101		[Rx] = [Rx] | [Ry]
-	SLL			00110 Rx Ry IMM(3) 00	[Rx] = [Ry] << IMM(0 as 8)
-	SRA			00110 Rx Ry IMM(3) 11	[Rx] = [Ry] >> IMM(0 as 8)
-	SUBU		11100 Rx Ry Rz 11		[Rz] = [Rx] - [Ry]
-	SW			11011 Rx Ry IMM(5)		MEM[[Rx] + Sign(IMM)] = [Ry]
-	SW_SP		11010 Rx IMM(8)			MEM[SP + Sign(IMM)] = [Rx]
-	NOT			11101 Rx Ry 01111		[Rx] =  ~R[y]
-	SLLV		11101 Rx Ry 00100		[Ry] = [Ry] << [Rx](logic)
-	SRAV		11101 Rx Ry 00111		[Ry] = [Ry] >> [Rx](arith)
-	CMPI		01110 Rx IMM(8)			[T] = ([Rx] /= Sign(IMM))
-	SLTI		01010 Rx IMM(8)			[T] = ([Rx] < Sign(IMM))
-	
-	
-
 用到的指令：
 	1、ADDSP3 
 
@@ -53,8 +5,36 @@
 
 	3、B	
 		--给定一个标识符，进行跳转；如，B start
+		--并不是每个B后都会NOP
 	
-	4、
+	4、LI
+	
+	5、ASM很奇怪！感觉它并没有支持这个命令啊...
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 
 
  
