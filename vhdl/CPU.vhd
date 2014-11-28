@@ -95,6 +95,34 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
+  component ALU
+    port (
+      op       : in  std_logic_vector(2 downto 0);
+      operand1 : in  std_logic_vector(15 downto 0);
+      operand2 : in  std_logic_vector(15 downto 0);
+      result   : out std_logic_vector(15 downto 0);
+      zero     : out std_logic;
+      neg      : out std_logic
+      );
+  end component;
+
+  component ForwardingUnit
+    port (
+      ID_EX_Rx          : in std_logic_vector(2 downto 0);
+      ID_Ex_Ry          : in std_logic_vector(2 downto 0);
+      ALU_Src1          : in std_logic_vector(1 downto 0);
+      ALU_Src2          : in std_logic_vector(1 downto 0);
+      EX_MEM_ALU_Result : in std_logic_vector(15 downto 0);
+      EX_MEM_Rd         : in std_logic_vector(2 downto 0);
+      EX_MEM_RegWrite   : in std_logic;
+      MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
+      MEM_WB_Rd         : in std_logic_vector(3 downto 0);
+      MEM_WB_RegWrite   : in std_logic;
+      Forward1          : out std_logic_vector(18 downto 0);
+      Forward2          : out std_logic_vector(18 downto 0);
+      );
+  end component;
+
   
   signal CPU_CLK : std_logic;
   
@@ -129,6 +157,30 @@ architecture CPU_Arch of CPU is
   signal ID_EX_ALU_Src1 : std_logic_vector(1 downto 0);
   signal ID_EX_ALU_Src2 : std_logic_vector(1 downto 0);
   signal ID_EX_RegDst : std_logic_vector(2 downto 0);
+
+  signal operand1 : std_logic_vector(15 downto 0);
+  signal operand2 : std_logic_vector(15 downto 0);
+  signal Forward1 : std_logic_vector(18 downto 0);
+  signal Forward2 : std_logic_vector(18 downto 0);
+  signal EX_MEM_ALU_Result : std_logic_vector(15 downto 0);
+  signal EX_MEM_Zero : std_logic;
+  signal EX_MEM_Neg : std_logic;
+  signal EX_MEM_RegWrite : std_logic;
+  signal EX_MEM_RegDataSrc : std_logic_vector(2 downto 0);
+  signal EX_MEM_CmpCode : std_logic;
+  signal EX_MEM_MemDataSrc : std_logic;
+  signal EX_MEM_MemRead : std_logic;
+  signal EX_MEM_MemWrite : std_logic;
+  signal EX_MEM_PC_1 : std_logic_vector(15 downto 0);
+  signal EX_MEM_RihVal : std_logic_vector(15 downto 0);
+  signal EX_MEM_RxVal : std_logic_vector(15 downto 0);
+  signal EX_MEM_RyVal : std_logic_vector(15 downto 0);
+  signal EX_MEM_ZeroImm : std_logic_vector(15 downto 0);
+  signal EX_MEM_Rd : std_logic_vector(3 downto 0);
+
+  signal MEM_WB_ALU_Result : std_logic_vector(15 downto 0);
+  signal MEM_WB_Rd : std_logic_vector(15 downto 0);
+  signal MEM_WB_RegWrite : std_logic;
   
 begin  -- CPU_Arch
 
@@ -237,6 +289,114 @@ begin  -- CPU_Arch
   -- ID / EX
   -----------------------------------------------------------------------------
 
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      EX_MEM_RegWrite <= ID_EX_RegWrite;
+      EX_MEM_RegDataSrc <= ID_EX_RegDataSrc;
+      EX_MEM_CmpCode <= ID_EX_CmpCode;
+      EX_MEM_MemDataSrc <= ID_EX_MemDataSrc;
+      EX_MEM_MemRead <= ID_EX_MemRead;
+      EX_MEM_MemWrite <= ID_EX_MemWrite;
+      EX_MEM_PC_1 <= ID_EX_PC_1;
+      EX_MEM_RihVal <= ID_EX_RihVal;
+      EX_MEM_RxVal <= ID_EX_RxVal;
+      EX_MEM_RyVal <= ID_EX_RyVal;
+      EX_MEM_ZeroImm <= ID_EX_ZeroImm;
+    end if;
+  end process;
+
+  -- out : operand1
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      case Forward1(18) is
+        when '1' =>
+          operand1 <= Forward1(15 downto 0);
+        when '0' =>
+          case Forward1(17 downto 16) is
+            when "00" =>                -- Rx
+              operand1 <= ID_EX_RxVal;
+            when "01" =>                -- Ry
+              operand1 <= ID_EX_RyVal;
+            when "10" =>                -- Rsp
+              operand1 <= ID_EX_RspVal;
+            when others => null;
+          end case;
+        when others => null;
+      end case;
+    end if;
+  end process;
+
+  -- out : operand2
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      case Forward2(18) is
+        when '1' =>
+          operand2 <= Forward2(15 downto 0);
+        when '0' =>
+          case Forward2(17 downto 16) is
+            when "00" =>                -- Rx
+              operand2 <= ID_EX_RxVal;
+            when "01" =>                -- Ry
+              operand2 <= ID_EX_RyVal;
+            when "10" =>                -- SignImm
+              operand2 <= ID_EX_SignImm;
+            when others => null;
+          end case;
+        when others => null;
+      end case;
+    end if;
+  end process;
+
+  -- out : Rd
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      case ID_EX_RegDst is
+        when "000" =>                   -- Rx
+          EX_MEM_Rd <= '0' & ID_EX_Rx;
+        when "001" =>                   -- Ry
+          EX_MEM_Rd <= '0' & ID_EX_Ry;
+        when "010" =>                   -- Rz
+          EX_MEM_Rd <= '0' & ID_EX_Rz;
+        when "011" =>                   -- Rsp
+          EX_MEM_Rd <= "1000";
+        when "100" =>                   -- Rt
+          EX_MEM_Rd <= "1001";
+        when "101" =>                   -- Rih
+          EX_MEM_Rd <= "1010";
+        when others => null;
+      end case;
+    end if;
+  end process;
+  
+  ALU : ALU
+    port map (
+      op       => ID_EX_ALU_Op,
+      operand1 => operand1,
+      operand2 => operand2,
+      result   => EX_MEM_ALU_Result,
+      zero     => EX_MEM_Zero,
+      neg      => EX_MEM_Neg
+      );
+
+  ForwUnit : ForwardingUnit
+    port map (
+      ID_EX_Rx          => ID_EX_Rx,
+      ID_EX_Ry          => ID_EX_Ry,
+      ALU_Src1          => ID_EX_ALU_Src1,
+      ALU_Src2          => ID_EX_ALU_Src2,
+      EX_MEM_ALU_Result => EX_MEM_ALU_Result,
+      EX_MEM_Rd         => EX_MEM_Rd,
+      EX_MEM_RegWrite   => EX_MEM_RegWrite,
+      MEM_WB_ALU_Result => MEM_WB_ALU_Result,
+      MEM_WB_Rd         => MEM_WB_Rd,
+      MEM_WB_RegWrite   => MEM_WB_RegWrite,
+      Forward1          => Forward1,
+      Forward2          => Forward2
+      );
 
   -----------------------------------------------------------------------------
   -- EX / MEM

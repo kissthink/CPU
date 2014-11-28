@@ -14,9 +14,9 @@ entity ForwardingUnit is
     MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
     MEM_WB_Rd         : in std_logic_vector(3 downto 0);
     MEM_WB_RegWrite   : in std_logic;
-    -- [18, 18] : whether use forward ; [17, 15] : ALU_Src; [16, 0] : forward data.
-    Forward1          : in std_logic_vector(18 downto 0);
-    Forward2          : in std_logic_vector(18 downto 0);
+    -- [18, 18] : whether use forward ; [17, 16] : ALU_Src; [15, 0] : forward data.
+    Forward1          : out std_logic_vector(18 downto 0);
+    Forward2          : out std_logic_vector(18 downto 0);
     );
 
 end ForwardingUnit;
