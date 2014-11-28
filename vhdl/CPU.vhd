@@ -10,11 +10,11 @@ entity CPU is
     
     input     : in   std_logic_vector(15 downto 0);
     
-    --Ram1Addr  : out   std_logic_vector(17 downto 0);
-    --Ram1Data  : inout std_logic_vector(15 downto 0);
-    --Ram1OE    : out   std_logic;
-    --Ram1RW    : out   std_logic;
-    --Ram1EN    : out   std_logic;
+    Ram1Addr  : out   std_logic_vector(17 downto 0);
+    Ram1Data  : inout std_logic_vector(15 downto 0);
+    Ram1OE    : out   std_logic;
+    Ram1RW    : out   std_logic;
+    Ram1EN    : out   std_logic;
     
     Ram2Addr  : out   std_logic_vector(17 downto 0);
     Ram2Data  : inout std_logic_vector(15 downto 0);
@@ -123,6 +123,34 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
+  component RegDataUnit
+    port (
+      CPU_CLK     : in  std_logic;
+      RegDataSrc  : in  std_logic_vector(2 downto 0);
+      CmpCode     : in  std_logic;
+      zero        : in  std_logic;
+      neg         : in  std_logic;
+      RegDataCtrl : out std_logic_vector(3 downto 0)
+      );
+  end component;
+
+  component DM
+    port (
+      clk50     : in    std_logic;
+      rdn, wrn  : in    std_logic;
+      wMemAddr  : in    std_logic_vector(15 downto 0);
+      wMemData  : in    std_logic_vector(15 downto 0);
+      MemRead   : in    std_logic;
+      MemWrite  : in    std_logic;
+      Ram1Addr  : out   std_logic_vector(17 downto 0);
+      Ram1Data  : inout std_logic_vector(15 downto 0);
+      Ram1OE    : out   std_logic;
+      Ram1RW    : out   std_logic;
+      Ram1EN    : out   std_logic;
+      MemOutput : out   std_logic_vector(15 downto 0)
+      );
+  end component;
+
   
   signal CPU_CLK : std_logic;
   
@@ -178,14 +206,19 @@ architecture CPU_Arch of CPU is
   signal EX_MEM_ZeroImm : std_logic_vector(15 downto 0);
   signal EX_MEM_Rd : std_logic_vector(3 downto 0);
 
+  signal wMemData : std_logic_vector(15 downto 0);
   signal MEM_WB_ALU_Result : std_logic_vector(15 downto 0);
   signal MEM_WB_Rd : std_logic_vector(15 downto 0);
   signal MEM_WB_RegWrite : std_logic;
+  signal MEM_WB_PC_1 : std_logic_vector(15 downto 0);
+  signal MEM_WB_RihVal : std_logic_vector(15 downto 0);
+  signal MEM_WB_RxVal : std_logic_vector(15 downto 0);
+  signal MEM_WB_RyVal : std_logic_vector(15 downto 0);
+  signal MEM_WB_ZeroImm : std_logic_vector(15 downto 0);
+  signal MEM_WB_Rd : std_logic_vector(3 downto 0);
+  signal MEM_WB_MemOutput : std_logic_vector(15 downto 0);
   
 begin  -- CPU_Arch
-
-  rdn <= '1';
-  wrn <= '1';
 
   output <= IF_ID_Instruc when input = X"0000" else
             PC when input = X"0001" else
@@ -402,7 +435,59 @@ begin  -- CPU_Arch
   -- EX / MEM
   -----------------------------------------------------------------------------
 
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      MEM_WB_RegWrite <= EX_MEM_RegWrite;
+      MEM_WB_ALU_Result <= EX_MEM_ALU_Result;
+      MEM_WB_PC_1 <= EX_MEM_PC_1;
+      MEM_WB_RihVal <= EX_MEM_RihVal;
+      MEM_WB_RxVal <= EX_MEM_RxVal;
+      MEM_WB_RyVal <= EX_MEM_RyVal;
+      MEM_WB_ZeroImm <= EX_MEM_ZeroImm;
+      MEM_WB_Rd <= EX_MEM_Rd;
+    end if;
+  end process;
 
+  -- out : wMemData
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      if EX_MEM_MemDataSrc = '0' then
+        wMemData <= EX_MEM_RxVal;
+      else
+        wMemData <= EX_MEM_RyVal;
+      end if;
+    end if;
+  end process;
+  
+  RegData : RegDataUnit
+    port map (
+      CPU_CLK    => CPU_CLK,
+      RegDataSrc => EX_MEM_RegDataSrc,
+      CmpCode    => EX_MEM_CmpCode,
+      zero       => EX_MEM_Zero,
+      neg        => EX_MEM_Neg,
+      RegDataSrc => MEM_WB_RegDataCtrl
+      );
+
+  DataMem : DM
+    port map (
+      clk50     => clk50,
+      rdn       => rdn,
+      wrn       => wrn,
+      wMemAddr  => EX_MEM_ALU_Result,
+      wMemData  => wMemData,
+      MemRead   => EX_MEM_MemRead,
+      MemWrite  => EX_MEM_MemWrite,
+      Ram1Addr  => Ram1Addr,
+      Ram1Data  => Ram1Data,
+      Ram1OE    => Ram1OE,
+      Ram1RW    => Ram1RW,
+      Ram1EN    => Ram1EN,
+      MemOutput => MEM_WB_MemOutput
+      );
+  
   -----------------------------------------------------------------------------
   -- MEM / WB
   -----------------------------------------------------------------------------
