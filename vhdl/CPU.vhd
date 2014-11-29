@@ -149,7 +149,8 @@ architecture CPU_Arch of CPU is
 
   component ALU
     port (
-      op       : in  std_logic_vector(2 downto 0);
+      CPU_CLK  : in  std_logic;
+      op_in    : in  std_logic_vector(2 downto 0);
       operand1 : in  std_logic_vector(15 downto 0);
       operand2 : in  std_logic_vector(15 downto 0);
       result   : out std_logic_vector(15 downto 0);
@@ -583,7 +584,8 @@ begin  -- CPU_Arch
   
   ALU_Unit : ALU
     port map (
-      op       => ID_EX_ALU_Op,
+      CPU_CLK  => CPU_CLK,
+      op_in    => ID_EX_ALU_Op,
       operand1 => operand1,
       operand2 => operand2,
       result   => EX_MEM_ALU_Result,
