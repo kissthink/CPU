@@ -6,7 +6,8 @@ entity RegisterFile is
   port (
     CPU_CLK  : in  std_logic;
     RegWrite : in  std_logic;
-    Rx, Ry   : in  std_logic_vector(2 downto 0);
+    Rx_in    : in  std_logic_vector(2 downto 0);
+    Ry_in    : in  std_logic_vector(2 downto 0);
     Rd       : in  std_logic_vector(3 downto 0);
     wData    : in  std_logic_vector(15 downto 0);
     
@@ -33,6 +34,8 @@ end RegisterFile;
 
 architecture RegisterFile_Arch of RegisterFile is
 
+  signal Rx : std_logic_vector(2 downto 0);
+  signal Ry : std_logic_vector(2 downto 0);
   signal R0 : std_logic_vector(15 downto 0) := (others => '0');
   signal R1 : std_logic_vector(15 downto 0) := (others => '0');
   signal R2 : std_logic_vector(15 downto 0) := (others => '0');
@@ -58,6 +61,14 @@ begin  -- RegisterFile_Arch
   Rsp_out <= Rsp;
   Rt_out <= Rt;
   Rih_out <= Rih;
+
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      Rx <= Rx_in;
+      Ry <= Ry_in;
+    end if;
+  end process;
   
   -- Write
   process (CPU_CLK)

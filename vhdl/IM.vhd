@@ -32,9 +32,35 @@ begin  -- IM_Arch
   Ram2EN <= '0';
   Ram2OE <= '0';
   Ram2RW <= '1';
+  
+  --currInstr <= "01001" & "001" & "00100010" when instrCnt = "0000" else
+  --             -- ADDIU R1 0x22.  R1 = R1 + 0x22 = 0x22
+               
+  --             "01000" & "001" & "010" & "0" & "0111" when instrCnt = "0001" else
+  --             -- ADDIU3 R1 R2 0x7.  R2 = R1 + 0x6 = 0x29
 
-  currInstr <= "01001" & "001" & "00001100" when instrCnt = "0000" else
-               "01001" & "010" & "01001000" when instrCnt = "0001" else
+  --             X"0800" when instrCnt = "0010" else
+  --             X"0800" when instrCnt = "0011" else
+  --             X"0800" when instrCnt = "0100" else
+               
+  --             "11101" & "001" & "010" & "01100" when instrCnt = "0101" else
+  --             -- AND R1 R2.  R1 = R1 & R2 = 0x20
+  
+  --             X"0800";
+
+  
+  currInstr <= "01001" & "001" & "00100010" when instrCnt = "0000" else
+               -- ADDIU R1 0x22.  R1 = R1 + 0x22 = 0x22
+               
+               "01000" & "001" & "010" & "0" & "0110" when instrCnt = "0001" else
+               -- ADDIU3 R1 R2 0x6.  R2 = R1 + 0x6 = 0x28
+               
+               "11100" & "001" & "010" & "011" & "01" when instrCnt = "0011" else
+               -- ADDU R1 R2 R3.  R3 = R1 + R2 = 0x4A
+               
+               "11101" & "010" & "011" & "01100" when instrCnt = "0100" else
+               -- AND R2 R3.  R2 = R2 & R3 = 0x8
+               
                X"0800";
   
   process (clk50)

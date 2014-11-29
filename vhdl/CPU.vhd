@@ -73,7 +73,8 @@ architecture CPU_Arch of CPU is
     port (
       CPU_CLK  : in  std_logic;
       RegWrite : in  std_logic;
-      Rx, Ry   : in  std_logic_vector(2 downto 0);
+      Rx_in    : in  std_logic_vector(2 downto 0);
+      Ry_in    : in  std_logic_vector(2 downto 0);
       Rd       : in  std_logic_vector(3 downto 0);
       wData    : in  std_logic_vector(15 downto 0);
     
@@ -318,8 +319,8 @@ begin  -- CPU_Arch
 
             operand1 when input = X"2000" else
             operand2 when input = X"2001" else
-            Forward1(18 downto 3) when input = X"2002" else
-            Forward2(18 downto 3) when input = X"2003" else
+            Forward1(18 downto 16) & Forward1(12 downto 0) when input = X"2002" else
+            Forward2(18 downto 16) & Forward2(12 downto 0) when input = X"2003" else
             EX_MEM_ALU_Result when input = X"2004" else
             EX_MEM_RegWrite & EX_MEM_RegDataSrc & EX_MEM_CmpCode & EX_MEM_MemDataSrc & EX_MEM_MemRead & EX_MEM_MemWrite & EX_MEM_Zero & EX_MEM_Neg & "00" & EX_MEM_Rd when input = X"2005" else
             EX_MEM_PC_1 when input = X"2006" else
@@ -426,8 +427,8 @@ begin  -- CPU_Arch
     port map (
       CPU_CLK  => CPU_CLK,
       RegWrite => RegWrite,
-      Rx       => IF_ID_Instruc(10 downto 8),
-      Ry       => IF_ID_Instruc(7 downto 5),
+      Rx_in    => IF_ID_Instruc(10 downto 8),
+      Ry_in    => IF_ID_Instruc(7 downto 5),
       Rd       => Rd,
       wData    => wData,
 
