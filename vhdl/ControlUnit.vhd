@@ -131,7 +131,8 @@ begin  -- ControlUnit_Arch
             output <= "11110" & "000" & "000010" & "0010100";
           when "01010" =>                 -- SLTI
             output <= "11111" & "000" & "000010" & "0010100";
-          when others => null;
+          when others =>
+            output <= (others => '0');
         end case;
       end if;
     end if;

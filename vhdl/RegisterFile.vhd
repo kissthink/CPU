@@ -9,6 +9,19 @@ entity RegisterFile is
     Rx, Ry   : in  std_logic_vector(2 downto 0);
     Rd       : in  std_logic_vector(3 downto 0);
     wData    : in  std_logic_vector(15 downto 0);
+    
+    R0_out   : out std_logic_vector(15 downto 0);
+    R1_out   : out std_logic_vector(15 downto 0);
+    R2_out   : out std_logic_vector(15 downto 0);
+    R3_out   : out std_logic_vector(15 downto 0);
+    R4_out   : out std_logic_vector(15 downto 0);
+    R5_out   : out std_logic_vector(15 downto 0);
+    R6_out   : out std_logic_vector(15 downto 0);
+    R7_out   : out std_logic_vector(15 downto 0);
+    Rsp_out  : out std_logic_vector(15 downto 0);
+    Rt_out   : out std_logic_vector(15 downto 0);
+    Rih_out  : out std_logic_vector(15 downto 0);
+    
     RxVal    : out std_logic_vector(15 downto 0);
     RyVal    : out std_logic_vector(15 downto 0);
     RspVal   : out std_logic_vector(15 downto 0);
@@ -20,7 +33,6 @@ end RegisterFile;
 
 architecture RegisterFile_Arch of RegisterFile is
 
-  signal clk : std_logic;
   signal R0 : std_logic_vector(15 downto 0) := (others => '0');
   signal R1 : std_logic_vector(15 downto 0) := (others => '0');
   signal R2 : std_logic_vector(15 downto 0) := (others => '0');
@@ -35,12 +47,22 @@ architecture RegisterFile_Arch of RegisterFile is
   
 begin  -- RegisterFile_Arch
 
-  clk <= CPU_CLK after 6 ns;
-
+  R0_out <= R0;
+  R1_out <= R1;
+  R2_out <= R2;
+  R3_out <= R3;
+  R4_out <= R4;
+  R5_out <= R5;
+  R6_out <= R6;
+  R7_out <= R7;
+  Rsp_out <= Rsp;
+  Rt_out <= Rt;
+  Rih_out <= Rih;
+  
   -- Write
-  process (clk)
+  process (CPU_CLK)
   begin  -- process
-    if rising_edge(clk) then
+    if rising_edge(CPU_CLK) then
       if RegWrite = '1' then
         case Rd is
           when "0000" => R0 <= wData;
@@ -61,9 +83,9 @@ begin  -- RegisterFile_Arch
   end process;
 
   -- Read Rsp / Rt / Rih
-  process (clk)
+  process (CPU_CLK)
   begin  -- process
-    if falling_edge(clk) then
+    if falling_edge(CPU_CLK) then
       RspVal <= Rsp;
       RtVal <= Rt;
       RihVal <= Rih;
@@ -71,9 +93,9 @@ begin  -- RegisterFile_Arch
   end process;
 
   -- Read Rx
-  process (clk)
+  process (CPU_CLK)
   begin  -- process
-    if falling_edge(clk) then
+    if falling_edge(CPU_CLK) then
       case Rx is
         when "000" => RxVal <= R0;
         when "001" => RxVal <= R1;
@@ -89,9 +111,9 @@ begin  -- RegisterFile_Arch
   end process;
 
   -- Read Ry
-  process (clk)
+  process (CPU_CLK)
   begin  -- process
-    if falling_edge(clk) then
+    if falling_edge(CPU_CLK) then
       case Ry is
         when "000" => RyVal <= R0;
         when "001" => RyVal <= R1;

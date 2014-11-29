@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
 
 -- Driven by rising edge of clk50
 -- One Read costs two cycles.
@@ -23,6 +24,8 @@ end IM;
 architecture IM_Arch of IM is
 
   signal state : std_logic := '0';
+  signal currInstr : std_logic_vector(15 downto 0) := X"0800";
+  signal instrCnt : std_logic_vector(3 downto 0) := "0000";
   
 begin  -- IM_Arch
 
@@ -30,6 +33,10 @@ begin  -- IM_Arch
   Ram2OE <= '0';
   Ram2RW <= '1';
 
+  currInstr <= "01001" & "001" & "00001100" when instrCnt = "0000" else
+               "01001" & "010" & "01001000" when instrCnt = "0001" else
+               X"0800";
+  
   process (clk50)
   begin  -- process
     if rising_edge(clk50) then
@@ -39,8 +46,11 @@ begin  -- IM_Arch
           Ram2Addr <= "00" & PC;
           state <= '1';
         when '1' =>
-          instruc <= Ram2Data;
+--          instruc <= Ram2Data;
+          instruc <= currInstr;
           state <= '0';
+          instrCnt <= instrCnt + 1;
+          
         when others => null;
       end case;
     end if;

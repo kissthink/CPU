@@ -25,6 +25,7 @@ entity CPU is
     rdn       : out   std_logic;
     wrn       : out   std_logic;
 
+    lDigits   : out   std_logic_vector(6 downto 0);
     output    : out   std_logic_vector(15 downto 0)
     );
 
@@ -75,6 +76,19 @@ architecture CPU_Arch of CPU is
       Rx, Ry   : in  std_logic_vector(2 downto 0);
       Rd       : in  std_logic_vector(3 downto 0);
       wData    : in  std_logic_vector(15 downto 0);
+    
+      R0_out   : out std_logic_vector(15 downto 0);
+      R1_out   : out std_logic_vector(15 downto 0);
+      R2_out   : out std_logic_vector(15 downto 0);
+      R3_out   : out std_logic_vector(15 downto 0);
+      R4_out   : out std_logic_vector(15 downto 0);
+      R5_out   : out std_logic_vector(15 downto 0);
+      R6_out   : out std_logic_vector(15 downto 0);
+      R7_out   : out std_logic_vector(15 downto 0);
+      Rsp_out  : out std_logic_vector(15 downto 0);
+      Rt_out   : out std_logic_vector(15 downto 0);
+      Rih_out  : out std_logic_vector(15 downto 0);
+
       RxVal    : out std_logic_vector(15 downto 0);
       RyVal    : out std_logic_vector(15 downto 0);
       RspVal   : out std_logic_vector(15 downto 0);
@@ -191,6 +205,17 @@ architecture CPU_Arch of CPU is
 
   
   signal CPU_CLK : std_logic := '0';
+  signal R0 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R1 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R2 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R3 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R4 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R5 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R6 : std_logic_vector(15 downto 0) := (others => '0');
+  signal R7 : std_logic_vector(15 downto 0) := (others => '0');
+  signal Rsp : std_logic_vector(15 downto 0) := (others => '0');
+  signal Rt  : std_logic_vector(15 downto 0) := (others => '0');
+  signal Rih : std_logic_vector(15 downto 0) := (others => '0');
   
   signal PC : std_logic_vector(15 downto 0) := X"0000";
   signal PC_tmp : std_logic_vector(15 downto 0) := X"0000";
@@ -198,8 +223,8 @@ architecture CPU_Arch of CPU is
   signal PC_Src : std_logic := '0';
   signal PC_New : std_logic_vector(15 downto 0) := X"0000";
   signal IF_ID_PC_1 : std_logic_vector(15 downto 0) := X"0000";
-  signal IF_ID_Instruc : std_logic_vector(15 downto 0) := X"1000";
-  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0) := X"1000";
+  signal IF_ID_Instruc : std_logic_vector(15 downto 0) := X"0800";
+  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0) := X"0800";
   signal IF_ID_Keep : std_logic := '0';
 
   signal RegWrite : std_logic := '0';
@@ -266,9 +291,64 @@ architecture CPU_Arch of CPU is
   
 begin  -- CPU_Arch
 
-  output <= IF_ID_Instruc when input = X"0000" else
-            PC when input = X"0001" else
-            IF_ID_PC_1 when input = X"0002" else
+  lDigits <= PC_Src & IF_ID_Keep & Force_Nop_B & ForceZero & Force_Nop_L & ID_EX_Clear & CPU_CLK;
+  
+  output <= PC when input = X"0000" else
+            PC_tmp when input = X"0001" else
+            PC_1 when input = X"0002" else
+            PC_New when input = X"0003" else
+            IF_ID_PC_1 when input = X"0004" else
+            IF_ID_Instruc when input = X"0005" else
+            IF_ID_Instruc_tmp when input = X"0006" else
+
+            ID_EX_RegWrite & ID_EX_CmpCode & ID_EX_MemRead & ID_EX_MemWrite & "1111" & ID_EX_MemDataSrc & ID_EX_RegDataSrc & '1' & ID_EX_BranchCtrl when input = X"1000" else
+            '0' & ID_EX_ALU_Op & ID_EX_ALU_Src1 & ID_EX_ALU_Src2 & "1111" & '0' & ID_EX_RegDst when input = X"1001" else
+            ID_EX_PC_1 when input = X"1002" else
+            ID_EX_Rx & ID_EX_Ry & ID_EX_Rz & "0000000" when input = X"1003" else
+            ID_EX_RxVal when input = X"1004" else
+            ID_EX_RyVal when input = X"1005" else
+            ID_EX_RspVal when input = X"1006" else
+            ID_EX_RtVal when input = X"1007" else
+            ID_EX_RihVal when input = X"1008" else
+            ID_EX_SignImm when input = X"1009" else
+            ID_EX_ZeroImm when input = X"100A" else
+            wData when input = X"100B" else
+            RegWrite & "000" & X"00" & Rd when input = X"100C" else
+
+            operand1 when input = X"2000" else
+            operand2 when input = X"2001" else
+            Forward1(18 downto 3) when input = X"2002" else
+            Forward2(18 downto 3) when input = X"2003" else
+            EX_MEM_ALU_Result when input = X"2004" else
+            EX_MEM_RegWrite & EX_MEM_RegDataSrc & EX_MEM_CmpCode & EX_MEM_MemDataSrc & EX_MEM_MemRead & EX_MEM_MemWrite & EX_MEM_Zero & EX_MEM_Neg & "00" & EX_MEM_Rd when input = X"2005" else
+            EX_MEM_PC_1 when input = X"2006" else
+            EX_MEM_RihVal when input = X"2007" else
+            EX_MEM_RxVal when input = X"2008" else
+            EX_MEM_RyVal when input = X"2009" else
+            EX_MEM_ZeroImm when input = X"200A" else
+
+            MEM_WB_RegWrite & "000" & MEM_WB_RegDataCtrl & MEM_WB_Rd & "0000" when input = X"3000" else
+            wMemData when input = X"3001" else
+            MEM_WB_ALU_Result when input = X"3002" else
+            MEM_WB_PC_1 when input = X"3003" else
+            MEM_WB_RihVal when input = X"3004" else
+            MEM_WB_RxVal when input = X"3005" else
+            MEM_WB_RyVal when input = X"3006" else
+            MEM_WB_ZeroImm when input = X"3007" else
+            MEM_WB_MemOutput when input = X"3008" else
+
+            R0 when input = X"4000" else
+            R1 when input = X"4001" else
+            R2 when input = X"4002" else
+            R3 when input = X"4003" else
+            R4 when input = X"4004" else
+            R5 when input = X"4005" else
+            R6 when input = X"4006" else
+            R7 when input = X"4007" else
+            Rsp when input = X"4008" else
+            Rt when input = X"4009" else
+            Rih when input = X"400A" else
+            
             (others => '1');
   
   process (clk50)
@@ -304,7 +384,7 @@ begin  -- CPU_Arch
   
   InstrMem : IM
     port map (
-      clk50  => clk50,
+      clk50    => clk50,
       PC       => PC,
       Ram2Addr => Ram2Addr,
       Ram2Data => Ram2Data,
@@ -349,6 +429,19 @@ begin  -- CPU_Arch
       Ry       => IF_ID_Instruc(7 downto 5),
       Rd       => Rd,
       wData    => wData,
+
+      R0_out   => R0,
+      R1_out   => R1,
+      R2_out   => R2,
+      R3_out   => R3,
+      R4_out   => R4,
+      R5_out   => R5,
+      R6_out   => R6,
+      R7_out   => R7,
+      Rsp_out  => Rsp,
+      Rt_out   => Rt,
+      Rih_out  => Rih,
+      
       RxVal    => ID_EX_RxVal,
       RyVal    => ID_EX_RyVal,
       RspVal   => ID_EX_RspVal,
@@ -575,32 +668,16 @@ begin  -- CPU_Arch
   -- MEM / WB
   -----------------------------------------------------------------------------
 
-  -- out : wData
-  process (CPU_CLK)
-  begin  -- process
-    if rising_edge(CPU_CLK) then
-      case MEM_WB_RegDataCtrl is
-        when "0000" =>
-          wData <= MEM_WB_ALU_Result;
-        when "0001" =>
-          wData <= MEM_WB_MemOutput;
-        when "0010" =>
-          wData <= MEM_WB_PC_1;
-        when "0011" =>
-          wData <= MEM_WB_RihVal;
-        when "0100" =>
-          wData <= MEM_WB_RxVal;
-        when "0101" =>
-          wData <= MEM_WB_RyVal;
-        when "0110" =>
-          wData <= MEM_WB_ZeroImm;
-        when "0111" =>
-          wData <= X"0000";
-        when "1000" =>
-          wData <= X"0001";
-        when others => null;
-      end case;
-    end if;
-  end process;
-  
+  RegWrite <= MEM_WB_RegWrite;
+  Rd <= MEM_WB_Rd;
+  wData <= MEM_WB_ALU_Result when MEM_WB_RegDataCtrl = "0000" else
+           MEM_WB_MemOutput when MEM_WB_RegDataCtrl = "0001" else
+           MEM_WB_PC_1 when MEM_WB_RegDataCtrl = "0010" else
+           MEM_WB_RihVal when MEM_WB_RegDataCtrl = "0011" else
+           MEM_WB_RxVal when MEM_WB_RegDataCtrl = "0100" else
+           MEM_WB_RyVal when MEM_WB_RegDataCtrl = "0101" else
+           MEM_WB_ZeroImm when MEM_WB_RegDataCtrl = "0110" else
+           X"0000" when MEM_WB_RegDataCtrl = "0111" else
+           X"0001" when MEM_WB_RegDataCtrl = "1000";
+           
 end CPU_Arch;
