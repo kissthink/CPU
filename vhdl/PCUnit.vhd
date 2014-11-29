@@ -21,44 +21,47 @@ end PCUnit;
 
 architecture PCUnit_Arch of PCUnit is
 
+  signal GoBranch : std_logic;
+  
 begin  -- PCUnit_Arch
 
-  Force_Nop <= PC_Src;
-  ID_EX_Clear <= PC_Src;
+  PC_Src <= GoBranch;
+  Force_Nop <= GoBranch;
+  ID_EX_Clear <= GoBranch;
   
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
       case BranchCtrl is
         when "001" =>                   -- JR
-          New_PC <= RxVal;
-          PC_Src <= '1';
+          PC_New <= RxVal;
+          GoBranch <= '1';
         when "010" =>                   -- B
-          New_PC <= PC_1 + SignImm;
-          PC_Src <= '1';
+          PC_New <= PC_1 + SignImm;
+          GoBranch <= '1';
         when "011" =>                   -- BEQZ
-          New_PC <= PC_1 + SignImm;
+          PC_New <= PC_1 + SignImm;
           if RxVal = X"0000" then
-            PC_Src <= '1';
+            GoBranch <= '1';
           else
-            PC_Src <= '0';
+            GoBranch <= '0';
           end if;
         when "100" =>                   -- BNEQZ
-          New_PC <= PC_1 + SignImm;
+          PC_New <= PC_1 + SignImm;
           if RxVal = X"0000" then
-            PC_Src <= '0';
+            GoBranch <= '0';
           else
-            PC_Src <= '1';
+            GoBranch <= '1';
           end if;
         when "101" =>                   -- BTEQZ
-          New_PC <= PC_1 + SignImm;
+          PC_New <= PC_1 + SignImm;
           if RtVal = X"0000" then
-            PC_Src <= '1';
+            GoBranch <= '1';
           else
-            PC_Src <= '0';
+            GoBranch <= '0';
           end if;
         when others =>                  -- Not B/J
-          PC_Src <= '0';
+          GoBranch <= '0';
       end case;
     end if;
   end process;

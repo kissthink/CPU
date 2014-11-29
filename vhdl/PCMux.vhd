@@ -23,7 +23,7 @@ begin  -- PCMux_Arch
       if PC_Src = '0' then
         PC_Next <= PC_1;
       else
-        PC_Next <= PC_Next;
+        PC_Next <= PC_New;
       end if;
     end if;
   end process;

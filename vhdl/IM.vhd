@@ -22,7 +22,7 @@ end IM;
 
 architecture IM_Arch of IM is
 
-  signal state : std_logic := "00";
+  signal state : std_logic := '0';
   
 begin  -- IM_Arch
 
@@ -32,20 +32,15 @@ begin  -- IM_Arch
 
   process (clk50)
   begin  -- process
-    if clk50'event then
+    if rising_edge(clk50) then
       case state is
-        when "00" =>
+        when '0' =>
           Ram2Data <= (others => 'Z');
-          state <= "01";
-        when "01" =>
           Ram2Addr <= "00" & PC;
-          state <= "10";
-        when "10" =>
-          state <= "11"'
-        when "11" =>
+          state <= '1';
+        when '1' =>
           instruc <= Ram2Data;
-          Ram2Data <= (others => 'Z');
-          state <= "00";
+          state <= '0';
         when others => null;
       end case;
     end if;

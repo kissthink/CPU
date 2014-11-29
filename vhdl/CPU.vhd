@@ -151,13 +151,13 @@ architecture CPU_Arch of CPU is
       ALU_Src1          : in std_logic_vector(1 downto 0);
       ALU_Src2          : in std_logic_vector(1 downto 0);
       EX_MEM_ALU_Result : in std_logic_vector(15 downto 0);
-      EX_MEM_Rd         : in std_logic_vector(2 downto 0);
+      EX_MEM_Rd         : in std_logic_vector(3 downto 0);
       EX_MEM_RegWrite   : in std_logic;
       MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
       MEM_WB_Rd         : in std_logic_vector(3 downto 0);
       MEM_WB_RegWrite   : in std_logic;
       Forward1          : out std_logic_vector(18 downto 0);
-      Forward2          : out std_logic_vector(18 downto 0);
+      Forward2          : out std_logic_vector(18 downto 0)
       );
   end component;
 
@@ -175,7 +175,6 @@ architecture CPU_Arch of CPU is
   component DM
     port (
       clk50     : in    std_logic;
-      rdn, wrn  : in    std_logic;
       wMemAddr  : in    std_logic_vector(15 downto 0);
       wMemData  : in    std_logic_vector(15 downto 0);
       MemRead   : in    std_logic;
@@ -185,83 +184,85 @@ architecture CPU_Arch of CPU is
       Ram1OE    : out   std_logic;
       Ram1RW    : out   std_logic;
       Ram1EN    : out   std_logic;
+      rdn, wrn  : out   std_logic;
       MemOutput : out   std_logic_vector(15 downto 0)
       );
   end component;
 
   
-  signal CPU_CLK : std_logic;
+  signal CPU_CLK : std_logic := '0';
   
   signal PC : std_logic_vector(15 downto 0) := X"0000";
   signal PC_tmp : std_logic_vector(15 downto 0) := X"0000";
   signal PC_1 : std_logic_vector(15 downto 0) := X"0000";
   signal PC_Src : std_logic := '0';
-  signal PC_New : std_logic_vector(15 downto 0);
-  signal IF_ID_PC_1 : std_logic_vector(15 downto 0);
-  signal IF_ID_Instruc : std_logic_vector(15 downto 0);
-  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0);
-  signal IF_ID_Keep : std_logic = '0';
+  signal PC_New : std_logic_vector(15 downto 0) := X"0000";
+  signal IF_ID_PC_1 : std_logic_vector(15 downto 0) := X"0000";
+  signal IF_ID_Instruc : std_logic_vector(15 downto 0) := X"1000";
+  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0) := X"1000";
+  signal IF_ID_Keep : std_logic := '0';
 
   signal RegWrite : std_logic := '0';
-  signal Rd : std_logic_vector(3 downto 0);
-  signal wData : std_logic_vector(15 downto 0);
+  signal Rd : std_logic_vector(3 downto 0) := "1111";
+  signal wData : std_logic_vector(15 downto 0) := X"0000";
   signal Force_Nop_B : std_logic := '0';
   signal Force_Nop_L : std_logic := '0';
-  signal ID_EX_PC_1 : std_logic_vector(15 downto 0);
-  signal ID_EX_Rx : std_logic_vector(10 downto 8);
-  signal ID_EX_Ry : std_logic_vector(7 downto 5);
-  signal ID_EX_Rz : std_logic_vector(4 downto 2);
-  signal ID_EX_RxVal : std_logic_vector(15 downto 0);
-  signal ID_EX_RyVal : std_logic_vector(15 downto 0);
-  signal ID_EX_RspVal : std_logic_vector(15 downto 0);
-  signal ID_EX_RtVal : std_logic_vector(15 downto 0);
-  signal ID_EX_RihVal : std_logic_vector(15 downto 0);
-  signal ID_EX_SignImm : std_logic_vector(15 downto 0);
-  signal ID_EX_ZeroImm : std_logic_vector(15 downto 0);
+  signal ForceZero : std_logic := '0';
+  signal ID_EX_PC_1 : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_Rx : std_logic_vector(10 downto 8) := (others => '0');
+  signal ID_EX_Ry : std_logic_vector(7 downto 5) := (others => '0');
+  signal ID_EX_Rz : std_logic_vector(4 downto 2) := (others => '0');
+  signal ID_EX_RxVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_RyVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_RspVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_RtVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_RihVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_SignImm : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_ZeroImm : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_RegWrite : std_logic := '0';
-  signal ID_EX_RegDataSrc : std_logic_vector(2 downto 0);
-  signal ID_EX_CmpCode : std_logic;
-  signal ID_EX_MemDataSrc : std_logic;
+  signal ID_EX_RegDataSrc : std_logic_vector(2 downto 0) := (others => '0');
+  signal ID_EX_CmpCode : std_logic := '0';
+  signal ID_EX_MemDataSrc : std_logic := '0';
   signal ID_EX_MemWrite : std_logic := '0';
   signal ID_EX_MemRead : std_logic := '0';
-  signal ID_EX_BranchCtrl : std_logic_vector(2 downto 0);
-  signal ID_EX_ALU_Op : std_logic_vector(2 downto 0);
-  signal ID_EX_ALU_Src1 : std_logic_vector(1 downto 0);
-  signal ID_EX_ALU_Src2 : std_logic_vector(1 downto 0);
-  signal ID_EX_RegDst : std_logic_vector(2 downto 0);
+  signal ID_EX_BranchCtrl : std_logic_vector(2 downto 0) := (others => '0');
+  signal ID_EX_ALU_Op : std_logic_vector(2 downto 0) := (others => '0');
+  signal ID_EX_ALU_Src1 : std_logic_vector(1 downto 0) := (others => '0');
+  signal ID_EX_ALU_Src2 : std_logic_vector(1 downto 0) := (others => '0');
+  signal ID_EX_RegDst : std_logic_vector(2 downto 0) := (others => '0');
   signal ID_EX_Clear : std_logic := '0';
 
-  signal operand1 : std_logic_vector(15 downto 0);
-  signal operand2 : std_logic_vector(15 downto 0);
-  signal Forward1 : std_logic_vector(18 downto 0);
-  signal Forward2 : std_logic_vector(18 downto 0);
-  signal EX_MEM_ALU_Result : std_logic_vector(15 downto 0);
-  signal EX_MEM_Zero : std_logic;
-  signal EX_MEM_Neg : std_logic;
-  signal EX_MEM_RegWrite : std_logic;
-  signal EX_MEM_RegDataSrc : std_logic_vector(2 downto 0);
-  signal EX_MEM_CmpCode : std_logic;
-  signal EX_MEM_MemDataSrc : std_logic;
-  signal EX_MEM_MemRead : std_logic;
-  signal EX_MEM_MemWrite : std_logic;
-  signal EX_MEM_PC_1 : std_logic_vector(15 downto 0);
-  signal EX_MEM_RihVal : std_logic_vector(15 downto 0);
-  signal EX_MEM_RxVal : std_logic_vector(15 downto 0);
-  signal EX_MEM_RyVal : std_logic_vector(15 downto 0);
-  signal EX_MEM_ZeroImm : std_logic_vector(15 downto 0);
-  signal EX_MEM_Rd : std_logic_vector(3 downto 0);
+  signal operand1 : std_logic_vector(15 downto 0) := (others => '0');
+  signal operand2 : std_logic_vector(15 downto 0) := (others => '0');
+  signal Forward1 : std_logic_vector(18 downto 0) := (others => '0');
+  signal Forward2 : std_logic_vector(18 downto 0) := (others => '0');
+  signal EX_MEM_ALU_Result : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_Zero : std_logic := '0';
+  signal EX_MEM_Neg : std_logic := '0';
+  signal EX_MEM_RegWrite : std_logic := '0';
+  signal EX_MEM_RegDataSrc : std_logic_vector(2 downto 0) := (others => '0');
+  signal EX_MEM_CmpCode : std_logic := '0';
+  signal EX_MEM_MemDataSrc : std_logic := '0';
+  signal EX_MEM_MemRead : std_logic := '0';
+  signal EX_MEM_MemWrite : std_logic := '0';
+  signal EX_MEM_PC_1 : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_RihVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_RxVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_RyVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_ZeroImm : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_Rd : std_logic_vector(3 downto 0) := (others => '0');
 
-  signal wMemData : std_logic_vector(15 downto 0);
-  signal MEM_WB_ALU_Result : std_logic_vector(15 downto 0);
-  signal MEM_WB_Rd : std_logic_vector(15 downto 0);
-  signal MEM_WB_RegWrite : std_logic;
-  signal MEM_WB_PC_1 : std_logic_vector(15 downto 0);
-  signal MEM_WB_RihVal : std_logic_vector(15 downto 0);
-  signal MEM_WB_RxVal : std_logic_vector(15 downto 0);
-  signal MEM_WB_RyVal : std_logic_vector(15 downto 0);
-  signal MEM_WB_ZeroImm : std_logic_vector(15 downto 0);
-  signal MEM_WB_Rd : std_logic_vector(3 downto 0);
-  signal MEM_WB_MemOutput : std_logic_vector(15 downto 0);
+  signal wMemData : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_ALU_Result : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_RegWrite : std_logic := '0';
+  signal MEM_WB_PC_1 : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_RihVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_RxVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_RyVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_ZeroImm : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_Rd : std_logic_vector(3 downto 0) := (others => '0');
+  signal MEM_WB_MemOutput : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_RegDataCtrl : std_logic_vector(3 downto 0) := (others => '0');
   
 begin  -- CPU_Arch
 
@@ -316,6 +317,8 @@ begin  -- CPU_Arch
   -- IF / ID
   -----------------------------------------------------------------------------
 
+  ForceZero <= Force_Nop_B or Force_Nop_L;
+  
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
@@ -332,8 +335,8 @@ begin  -- CPU_Arch
       ID_EX_Ry      => ID_EX_Ry,
       ID_EX_RegDst  => ID_EX_RegDst,
       ID_EX_MemRead => ID_EX_MemRead,
-      IF_ID_Rx      => IF_ID_Rx,
-      IF_ID_Ry      => IF_ID_Ry,
+      IF_ID_Rx      => IF_ID_Instruc(10 downto 8),
+      IF_ID_Ry      => IF_ID_Instruc(7 downto 5),
       Force_Nop     => Force_Nop_L,
       IF_ID_Keep    => IF_ID_Keep
       );
@@ -371,7 +374,7 @@ begin  -- CPU_Arch
     port map (
       CPU_CLK    => CPU_CLK,
       instruc    => IF_ID_Instruc,
-      ForceZero  => Force_Nop_B or Force_Nop_L,
+      ForceZero  => ForceZero,
       RegWrite   => ID_EX_RegWrite,
       RegDataSrc => ID_EX_RegDataSrc,
       CmpCode    => ID_EX_CmpCode,
@@ -485,7 +488,7 @@ begin  -- CPU_Arch
       ID_EX_Clear => ID_EX_Clear
       );
   
-  ALU : ALU
+  ALU_Unit : ALU
     port map (
       op       => ID_EX_ALU_Op,
       operand1 => operand1,
@@ -543,19 +546,17 @@ begin  -- CPU_Arch
   
   RegData : RegDataUnit
     port map (
-      CPU_CLK    => CPU_CLK,
-      RegDataSrc => EX_MEM_RegDataSrc,
-      CmpCode    => EX_MEM_CmpCode,
-      zero       => EX_MEM_Zero,
-      neg        => EX_MEM_Neg,
-      RegDataSrc => MEM_WB_RegDataCtrl
+      CPU_CLK     => CPU_CLK,
+      RegDataSrc  => EX_MEM_RegDataSrc,
+      CmpCode     => EX_MEM_CmpCode,
+      zero        => EX_MEM_Zero,
+      neg         => EX_MEM_Neg,
+      RegDataCtrl => MEM_WB_RegDataCtrl
       );
 
   DataMem : DM
     port map (
       clk50     => clk50,
-      rdn       => rdn,
-      wrn       => wrn,
       wMemAddr  => EX_MEM_ALU_Result,
       wMemData  => wMemData,
       MemRead   => EX_MEM_MemRead,
@@ -565,6 +566,8 @@ begin  -- CPU_Arch
       Ram1OE    => Ram1OE,
       Ram1RW    => Ram1RW,
       Ram1EN    => Ram1EN,
+      rdn       => rdn,
+      wrn       => wrn,
       MemOutput => MEM_WB_MemOutput
       );
   

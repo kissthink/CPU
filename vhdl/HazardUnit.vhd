@@ -18,7 +18,8 @@ end HazardUnit;
 
 architecture HazardUnit_Arch of HazardUnit is
 
-  signal Rs : std_logic_vector(2 downto 0);
+  signal Rs : std_logic_vector(2 downto 0) := "111";
+  signal enable : std_logic := '0';
   
 begin  -- HazardUnit_Arch
 
@@ -26,9 +27,10 @@ begin  -- HazardUnit_Arch
         ID_EX_Ry when ID_EX_RegDst = "001" else
         "111";
   
-  Force_Nop <= '1' when ID_EX_MemRead = '1' and (Rs = IF_ID_Rx or Rs = IF_ID_Ry) else
+  enable <= '1' when ID_EX_MemRead = '1' and (Rs = IF_ID_Rx or Rs = IF_ID_Ry) else
                '0';
 
-  IF_ID_Keep <= Force_Nop;
+  IF_ID_Keep <= enable;
+  Force_Nop <= enable;
 
 end HazardUnit_Arch;

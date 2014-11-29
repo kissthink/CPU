@@ -8,7 +8,6 @@ entity DM is
   
   port (
     clk50     : in    std_logic;
-    rdn, wrn  : in    std_logic;
     wMemAddr  : in    std_logic_vector(15 downto 0);
     wMemData  : in    std_logic_vector(15 downto 0);
     MemRead   : in    std_logic;
@@ -18,6 +17,7 @@ entity DM is
     Ram1OE    : out   std_logic;
     Ram1RW    : out   std_logic;
     Ram1EN    : out   std_logic;
+    rdn, wrn  : out    std_logic;
     MemOutput : out   std_logic_vector(15 downto 0)
     );
 
@@ -25,57 +25,45 @@ end DM;
 
 architecture DM_Arch of DM is
 
-  signal state : std_logic := "00";
+  signal state : std_logic := '0';
   
-begin  -- IM_Arch
+begin  -- DM_Arch
 
   Ram1EN <= '0';
   Ram1OE <= '0';
-  Ram1RW <= '1';
   rdn <= '1';
   wrn <= '1';
 
   process (clk50)
   begin  -- process
-    if clk50'event then
+    if rising_edge(clk50) then
       if MemRead = '1' then
         case state is
-          when "00" =>
-            Ram1Data <= (others => 'Z');
+          when '0' =>
             Ram1RW <= '1';
-            state <= "01";
-          when "01" =>
+            Ram1Data <= (others => 'Z');
             Ram1Addr <= "00" & wMemAddr;
+            state <= '1';
+          when '1' =>
             Ram1RW <= '1';
-            state <= "10";
-          when "10" =>
             MemOutput <= Ram1Data;
-            Ram1RW <= '1';
-            state <= "11";
-          when "11" =>
-            Ram1Data <= (others => 'Z');
-            Ram1RW <= '1';
-            state <= "00";
+            state <= '0';
+          when others => null;
         end case;
       elsif MemWrite = '1' then
         case state is
-          when "00" =>
+          when '0' =>
+            Ram1RW <= '1';
+            Ram1Addr <= "00" & wMemAddr;
             Ram1Data <= wMemData;
-            Ram1RW <= '1';
-            state <= "01";
-          when "01" =>
-            Ram1Addr <= wMemAddr;
-            Ram1RW <= '1';
-            state <= "10";
-          when "10" =>
+            state <= '1';
+          when '1' =>
             Ram1RW <= '0';
-            state <= "11";
-          when "11" =>
-            Ram1RW <= '1';
-            state <= "00";
+            state <= '0';
+          when others => null;
         end case;
       end if;
     end if;
   end process;
   
-end IM_Arch;
+end DM_Arch;
