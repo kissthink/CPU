@@ -255,6 +255,8 @@ architecture CPU_Arch of CPU is
   signal ID_EX_CmpCode_Clear : std_logic_vector(1 downto 0) := (others => '0');
   signal ID_EX_BranchCtrl_Clear : std_logic_vector(2 downto 0) := (others => '0');
   signal ID_EX_RxVal_Forward : std_logic_vector(15 downto 0) := (others => '0');
+  signal ID_EX_CmpCode_Cache : std_logic_vector(1 downto 0) := (others => '0');
+
 
   signal operand1 : std_logic_vector(15 downto 0) := (others => '0');
   signal operand2 : std_logic_vector(15 downto 0) := (others => '0');
@@ -487,13 +489,6 @@ begin  -- CPU_Arch
       ForwardB          => ForwardB
       );
   
------------------------------------------------------------------------------
-  -- ID / EX
-  -----------------------------------------------------------------------------
-
-  Rt <= X"000" & "000" & not zero when ID_EX_CmpCode_Clear = "01" else
-        X"000" & "000" & neg when ID_EX_CmpCode_Clear = "10";
-  
   EX_MEM_RxVal <= ID_EX_RxVal;
   EX_MEM_RyVal <= ID_EX_RyVal;
 
@@ -507,6 +502,15 @@ begin  -- CPU_Arch
 
   ID_EX_RxVal_Forward <= ID_EX_RxVal when ForwardB(16) = '0' else
                          ForwardB(15 downto 0);
+  
+-----------------------------------------------------------------------------
+  -- ID / EX
+  -----------------------------------------------------------------------------
+
+  ID_EX_CmpCode_Cache <= ID_EX_CmpCode_Clear when rising_edge(CPU_CLK);
+
+  Rt <= X"000" & "000" & not zero when ID_EX_CmpCode_Cache = "01" else
+        X"000" & "000" & neg when ID_EX_CmpCode_Cache = "10";
   
   process (CPU_CLK)
   begin  -- process
