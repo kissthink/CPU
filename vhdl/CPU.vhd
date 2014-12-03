@@ -33,16 +33,6 @@ end CPU;
 
 architecture CPU_Arch of CPU is
 
-  component PCMux
-    port (
-      CPU_CLK : in  std_logic;
-      PC_Src  : in  std_logic;
-      PC_New  : in  std_logic_vector(15 downto 0);
-      PC_1    : in  std_logic_vector(15 downto 0);
-      PC_Next : out std_logic_vector(15 downto 0)
-      );
-  end component;
-  
   component IM
     port (
       clk50     : in    std_logic;
@@ -87,13 +77,11 @@ architecture CPU_Arch of CPU is
       R6_out   : out std_logic_vector(15 downto 0);
       R7_out   : out std_logic_vector(15 downto 0);
       Rsp_out  : out std_logic_vector(15 downto 0);
-      Rt_out   : out std_logic_vector(15 downto 0);
       Rih_out  : out std_logic_vector(15 downto 0);
 
       RxVal    : out std_logic_vector(15 downto 0);
       RyVal    : out std_logic_vector(15 downto 0);
       RspVal   : out std_logic_vector(15 downto 0);
-      RtVal    : out std_logic_vector(15 downto 0);
       RihVal   : out std_logic_vector(15 downto 0)
       );
   end component;
@@ -120,19 +108,37 @@ architecture CPU_Arch of CPU is
       instruc    : in  std_logic_vector(15 downto 0);
       ForceZero  : in  std_logic;
       RegWrite   : out std_logic;
-      RegDataSrc : out std_logic_vector(2 downto 0);
-      CmpCode    : out std_logic;
+      RegDataSrc : out std_logic;
+      CmpCode    : out std_logic_vector(1 downto 0);
       MemDataSrc : out std_logic;
       MemWrite   : out std_logic;
       MemRead    : out std_logic;
       BranchCtrl : out std_logic_vector(2 downto 0);
       ALU_Op     : out std_logic_vector(2 downto 0);
-      ALU_Src1   : out std_logic_vector(1 downto 0);
+      ALU_Src1   : out std_logic_vector(2 downto 0);
       ALU_Src2   : out std_logic_vector(1 downto 0);
       RegDst     : out std_logic_vector(2 downto 0)
       );
   end component;
 
+  component ForwardingUnit
+    port (
+      ID_EX_Rx          : in std_logic_vector(2 downto 0);
+      ID_Ex_Ry          : in std_logic_vector(2 downto 0);
+      ALU_Src1          : in std_logic_vector(2 downto 0);
+      ALU_Src2          : in std_logic_vector(1 downto 0);
+      EX_MEM_ALU_Result : in std_logic_vector(15 downto 0);
+      MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
+      EX_MEM_Rd         : in std_logic_vector(3 downto 0);
+      EX_MEM_RegWrite   : in std_logic;
+      MEM_WB_Rd         : in std_logic_vector(3 downto 0);
+      MEM_WB_RegWrite   : in std_logic;
+      Forward1          : out std_logic_vector(19 downto 0);
+      Forward2          : out std_logic_vector(18 downto 0);
+      ForwardB          : out std_logic_vector(16 downto 0)
+      );
+  end component;
+  
   component PCUnit
     port (
       CPU_CLK     : in  std_logic;
@@ -160,34 +166,6 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
-  component ForwardingUnit
-    port (
-      ID_EX_Rx          : in std_logic_vector(2 downto 0);
-      ID_Ex_Ry          : in std_logic_vector(2 downto 0);
-      ALU_Src1          : in std_logic_vector(1 downto 0);
-      ALU_Src2          : in std_logic_vector(1 downto 0);
-      EX_MEM_ALU_Result : in std_logic_vector(15 downto 0);
-      EX_MEM_Rd         : in std_logic_vector(3 downto 0);
-      EX_MEM_RegWrite   : in std_logic;
-      MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
-      MEM_WB_Rd         : in std_logic_vector(3 downto 0);
-      MEM_WB_RegWrite   : in std_logic;
-      Forward1          : out std_logic_vector(18 downto 0);
-      Forward2          : out std_logic_vector(18 downto 0)
-      );
-  end component;
-
-  component RegDataUnit
-    port (
-      CPU_CLK     : in  std_logic;
-      RegDataSrc  : in  std_logic_vector(2 downto 0);
-      CmpCode     : in  std_logic;
-      zero        : in  std_logic;
-      neg         : in  std_logic;
-      RegDataCtrl : out std_logic_vector(3 downto 0)
-      );
-  end component;
-
   component DM
     port (
       clk50     : in    std_logic;
@@ -205,6 +183,18 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
+  component ForwardingDMUnit
+    port (
+      MemDataSrc : in  std_logic;
+      Rx         : in  std_logic_vector(2 downto 0);
+      Ry         : in  std_logic_vector(2 downto 0);
+      RegWrite   : in  std_logic;
+      ALU_Result : in  std_logic_vector(15 downto 0);
+      Rd         : in  std_logic_vector(3 downto 0);
+      Forward    : out std_logic_vector(17 downto 0)
+      );
+  end component;
+
   
   signal CPU_CLK : std_logic := '0';
   signal R0 : std_logic_vector(15 downto 0) := (others => '0');
@@ -216,7 +206,7 @@ architecture CPU_Arch of CPU is
   signal R6 : std_logic_vector(15 downto 0) := (others => '0');
   signal R7 : std_logic_vector(15 downto 0) := (others => '0');
   signal Rsp : std_logic_vector(15 downto 0) := (others => '0');
-  signal Rt  : std_logic_vector(15 downto 0) := (others => '0');
+  signal Rt  : std_logic_vector(15 downto 0) := (others => '0');  -- not common
   signal Rih : std_logic_vector(15 downto 0) := (others => '0');
   
   signal PC : std_logic_vector(15 downto 0) := X"0000";
@@ -235,6 +225,8 @@ architecture CPU_Arch of CPU is
   signal Force_Nop_B : std_logic := '0';
   signal Force_Nop_L : std_logic := '0';
   signal ForceZero : std_logic := '0';
+  signal BranchCtrl : std_logic := '0';  -- and ID_EX_Clear
+  signal RegDst : std_logic_vector(2 downto 0) := (others => '1');
   signal ID_EX_PC_1 : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_Rx : std_logic_vector(10 downto 8) := (others => '0');
   signal ID_EX_Ry : std_logic_vector(7 downto 5) := (others => '0');
@@ -242,54 +234,56 @@ architecture CPU_Arch of CPU is
   signal ID_EX_RxVal : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_RyVal : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_RspVal : std_logic_vector(15 downto 0) := (others => '0');
-  signal ID_EX_RtVal : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_RihVal : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_SignImm : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_ZeroImm : std_logic_vector(15 downto 0) := (others => '0');
   signal ID_EX_RegWrite : std_logic := '0';
-  signal ID_EX_RegDataSrc : std_logic_vector(2 downto 0) := (others => '0');
-  signal ID_EX_CmpCode : std_logic := '0';
+  signal ID_EX_RegDataSrc : std_logic := '0';
+  signal ID_EX_CmpCode : std_logic_vector(1 downto 0) := "00";
   signal ID_EX_MemDataSrc : std_logic := '0';
   signal ID_EX_MemWrite : std_logic := '0';
   signal ID_EX_MemRead : std_logic := '0';
   signal ID_EX_BranchCtrl : std_logic_vector(2 downto 0) := (others => '0');
   signal ID_EX_ALU_Op : std_logic_vector(2 downto 0) := (others => '0');
-  signal ID_EX_ALU_Src1 : std_logic_vector(1 downto 0) := (others => '0');
+  signal ID_EX_ALU_Src1 : std_logic_vector(2 downto 0) := (others => '0');
   signal ID_EX_ALU_Src2 : std_logic_vector(1 downto 0) := (others => '0');
   signal ID_EX_RegDst : std_logic_vector(2 downto 0) := (others => '0');
   signal ID_EX_Clear : std_logic := '0';
+  signal ID_EX_RegWrite_Clear : std_logic := '0';
+  signal ID_EX_MemRead_Clear : std_logic := '0';
+  signal ID_EX_MemWrite_Clear : std_logic := '0';
+  signal ID_EX_CmpCode_Clear : std_logic_vector(1 downto 0) := (others => '0');
+  signal ID_EX_BranchCtrl_Clear : std_logic_vector(2 downto 0) := (others => '0');
+  signal ID_EX_RxVal_Forward : std_logic_vector(15 downto 0) := (others => '0');
 
   signal operand1 : std_logic_vector(15 downto 0) := (others => '0');
   signal operand2 : std_logic_vector(15 downto 0) := (others => '0');
-  signal Forward1 : std_logic_vector(18 downto 0) := (others => '0');
+  signal Forward1 : std_logic_vector(19 downto 0) := (others => '0');
   signal Forward2 : std_logic_vector(18 downto 0) := (others => '0');
+  signal ForwardB : std_logic_vector(16 downto 0) := (others => '0');
+  signal zero : std_logic := '0';
+  signal neg : std_logic := '0';
   signal EX_MEM_ALU_Result : std_logic_vector(15 downto 0) := (others => '0');
-  signal EX_MEM_Zero : std_logic := '0';
-  signal EX_MEM_Neg : std_logic := '0';
   signal EX_MEM_RegWrite : std_logic := '0';
-  signal EX_MEM_RegDataSrc : std_logic_vector(2 downto 0) := (others => '0');
-  signal EX_MEM_CmpCode : std_logic := '0';
+  signal EX_MEM_RegDataSrc : std_logic := '0';
   signal EX_MEM_MemDataSrc : std_logic := '0';
   signal EX_MEM_MemRead : std_logic := '0';
   signal EX_MEM_MemWrite : std_logic := '0';
-  signal EX_MEM_PC_1 : std_logic_vector(15 downto 0) := (others => '0');
-  signal EX_MEM_RihVal : std_logic_vector(15 downto 0) := (others => '0');
+  signal EX_MEM_Rx : std_logic_vector(2 downto 0) := "000";
+  signal EX_MEM_Ry : std_logic_vector(2 downto 0) := "000";
+  -- refresh immediately
   signal EX_MEM_RxVal : std_logic_vector(15 downto 0) := (others => '0');
+  -- refresh immediately
   signal EX_MEM_RyVal : std_logic_vector(15 downto 0) := (others => '0');
-  signal EX_MEM_ZeroImm : std_logic_vector(15 downto 0) := (others => '0');
   signal EX_MEM_Rd : std_logic_vector(3 downto 0) := (others => '0');
 
   signal wMemData : std_logic_vector(15 downto 0) := (others => '0');
-  signal MEM_WB_ALU_Result : std_logic_vector(15 downto 0) := (others => '0');
+  signal ForwardDM : std_logic_vector(17 downto 0) := (others => '0');
   signal MEM_WB_RegWrite : std_logic := '0';
-  signal MEM_WB_PC_1 : std_logic_vector(15 downto 0) := (others => '0');
-  signal MEM_WB_RihVal : std_logic_vector(15 downto 0) := (others => '0');
-  signal MEM_WB_RxVal : std_logic_vector(15 downto 0) := (others => '0');
-  signal MEM_WB_RyVal : std_logic_vector(15 downto 0) := (others => '0');
-  signal MEM_WB_ZeroImm : std_logic_vector(15 downto 0) := (others => '0');
+  signal MEM_WB_RegDataSrc : std_logic;
   signal MEM_WB_Rd : std_logic_vector(3 downto 0) := (others => '0');
+  signal MEM_WB_ALU_Result : std_logic_vector(15 downto 0) := (others => '0');
   signal MEM_WB_MemOutput : std_logic_vector(15 downto 0) := (others => '0');
-  signal MEM_WB_RegDataCtrl : std_logic_vector(3 downto 0) := (others => '0');
   
 begin  -- CPU_Arch
 
@@ -303,41 +297,34 @@ begin  -- CPU_Arch
             IF_ID_Instruc when input = X"0005" else
             IF_ID_Instruc_tmp when input = X"0006" else
 
-            ID_EX_RegWrite & ID_EX_CmpCode & ID_EX_MemRead & ID_EX_MemWrite & "1111" & ID_EX_MemDataSrc & ID_EX_RegDataSrc & '1' & ID_EX_BranchCtrl when input = X"1000" else
-            '0' & ID_EX_ALU_Op & ID_EX_ALU_Src1 & ID_EX_ALU_Src2 & "1111" & '0' & ID_EX_RegDst when input = X"1001" else
+            ID_EX_RegWrite_Clear & ID_EX_MemRead_Clear & ID_EX_MemWrite_Clear & ID_EX_CmpCode_Clear & "111" & ID_EX_MemDataSrc & ID_EX_RegDataSrc  & "111" & ID_EX_BranchCtrl_Clear when input = X"1000" else
+            ID_EX_ALU_Op & ID_EX_ALU_Src1 & ID_EX_ALU_Src2 & "0" & RegDst & '0' & ID_EX_RegDst when input = X"1001" else
             ID_EX_PC_1 when input = X"1002" else
             ID_EX_Rx & ID_EX_Ry & ID_EX_Rz & "0000000" when input = X"1003" else
             ID_EX_RxVal when input = X"1004" else
             ID_EX_RyVal when input = X"1005" else
             ID_EX_RspVal when input = X"1006" else
-            ID_EX_RtVal when input = X"1007" else
             ID_EX_RihVal when input = X"1008" else
             ID_EX_SignImm when input = X"1009" else
             ID_EX_ZeroImm when input = X"100A" else
             wData when input = X"100B" else
             RegWrite & "000" & X"00" & Rd when input = X"100C" else
+            ForwardB(16) & ForwardB(14 downto 0) when input = X"100D" else
+            ID_EX_RxVal_Forward when input = X"100E" else
 
             operand1 when input = X"2000" else
             operand2 when input = X"2001" else
-            Forward1(18 downto 16) & Forward1(12 downto 0) when input = X"2002" else
+            Forward1(19 downto 16) & Forward1(11 downto 0) when input = X"2002" else
             Forward2(18 downto 16) & Forward2(12 downto 0) when input = X"2003" else
             EX_MEM_ALU_Result when input = X"2004" else
-            EX_MEM_RegWrite & EX_MEM_RegDataSrc & EX_MEM_CmpCode & EX_MEM_MemDataSrc & EX_MEM_MemRead & EX_MEM_MemWrite & EX_MEM_Zero & EX_MEM_Neg & "00" & EX_MEM_Rd when input = X"2005" else
-            EX_MEM_PC_1 when input = X"2006" else
-            EX_MEM_RihVal when input = X"2007" else
-            EX_MEM_RxVal when input = X"2008" else
-            EX_MEM_RyVal when input = X"2009" else
-            EX_MEM_ZeroImm when input = X"200A" else
+            EX_MEM_RegWrite & EX_MEM_RegDataSrc & "111" & EX_MEM_MemDataSrc & EX_MEM_MemRead & EX_MEM_MemWrite & "0000" & EX_MEM_Rd when input = X"2005" else
+            EX_MEM_RxVal when input = X"2006" else
+            EX_MEM_RyVal when input = X"2007" else
 
-            MEM_WB_RegWrite & "000" & MEM_WB_RegDataCtrl & MEM_WB_Rd & "0000" when input = X"3000" else
+            MEM_WB_RegWrite & "000" & MEM_WB_RegDataSrc & "000" & MEM_WB_Rd & "0000" when input = X"3000" else
             wMemData when input = X"3001" else
             MEM_WB_ALU_Result when input = X"3002" else
-            MEM_WB_PC_1 when input = X"3003" else
-            MEM_WB_RihVal when input = X"3004" else
-            MEM_WB_RxVal when input = X"3005" else
-            MEM_WB_RyVal when input = X"3006" else
-            MEM_WB_ZeroImm when input = X"3007" else
-            MEM_WB_MemOutput when input = X"3008" else
+            MEM_WB_MemOutput when input = X"3003" else
 
             R0 when input = X"4000" else
             R1 when input = X"4001" else
@@ -367,7 +354,7 @@ begin  -- CPU_Arch
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
-      PC_1 <= PC + 1;
+      PC_1 <= PC_1 + 1;
     end if;
   end process;
 
@@ -375,14 +362,16 @@ begin  -- CPU_Arch
   PC <= PC_tmp when IF_ID_Keep = '0';
   IF_ID_Instruc <= IF_ID_Instruc_tmp when IF_ID_Keep = '0';
 
-  PC_Mux : PCMUX
-    port map (
-      CPU_CLK => CPU_CLK,
-      PC_Src  => PC_Src,
-      PC_New  => PC_New,
-      PC_1    => PC_1,
-      PC_Next => PC_tmp
-      );
+  process (CPU_CLK)
+  begin  -- process
+    if rising_edge(CPU_CLK) then
+      if PC_Src = '0' then
+        PC_tmp <= PC_1;
+      else
+        PC_tmp <= PC_New;
+      end if;
+    end if;
+  end process;
   
   InstrMem : IM
     port map (
@@ -416,7 +405,7 @@ begin  -- CPU_Arch
       ID_EX_Rx      => ID_EX_Rx,
       ID_EX_Ry      => ID_EX_Ry,
       ID_EX_RegDst  => ID_EX_RegDst,
-      ID_EX_MemRead => ID_EX_MemRead,
+      ID_EX_MemRead => ID_EX_MemRead_Clear,
       IF_ID_Rx      => IF_ID_Instruc(10 downto 8),
       IF_ID_Ry      => IF_ID_Instruc(7 downto 5),
       Force_Nop     => Force_Nop_L,
@@ -441,13 +430,11 @@ begin  -- CPU_Arch
       R6_out   => R6,
       R7_out   => R7,
       Rsp_out  => Rsp,
-      Rt_out   => Rt,
       Rih_out  => Rih,
       
       RxVal    => ID_EX_RxVal,
       RyVal    => ID_EX_RyVal,
       RspVal   => ID_EX_RspVal,
-      RtVal    => ID_EX_RtVal,
       RihVal   => ID_EX_RihVal
       );
 
@@ -482,24 +469,53 @@ begin  -- CPU_Arch
       ALU_Src2   => ID_EX_ALU_Src2,
       RegDst     => ID_EX_RegDst
       );
-  -----------------------------------------------------------------------------
+
+  ForwUnit : ForwardingUnit
+    port map (
+      ID_EX_Rx          => ID_EX_Rx,
+      ID_EX_Ry          => ID_EX_Ry,
+      ALU_Src1          => ID_EX_ALU_Src1,
+      ALU_Src2          => ID_EX_ALU_Src2,
+      EX_MEM_ALU_Result => EX_MEM_ALU_Result,
+      MEM_WB_ALU_Result => MEM_WB_ALU_Result,
+      EX_MEM_Rd         => EX_MEM_Rd,
+      EX_MEM_RegWrite   => EX_MEM_RegWrite,
+      MEM_WB_Rd         => MEM_WB_Rd,
+      MEM_WB_RegWrite   => MEM_WB_RegWrite,
+      Forward1          => Forward1,
+      Forward2          => Forward2,
+      ForwardB          => ForwardB
+      );
+  
+-----------------------------------------------------------------------------
   -- ID / EX
   -----------------------------------------------------------------------------
 
+  Rt <= X"000" & "000" & not zero when ID_EX_CmpCode_Clear = "01" else
+        X"000" & "000" & neg when ID_EX_CmpCode_Clear = "10";
+  
+  EX_MEM_RxVal <= ID_EX_RxVal;
+  EX_MEM_RyVal <= ID_EX_RyVal;
+
+  ID_EX_RegWrite_Clear <= ID_EX_RegWrite and not ID_EX_Clear;
+  ID_EX_MemRead_Clear <= ID_EX_MemRead and not ID_EX_Clear;
+  ID_EX_MemWrite_Clear <= ID_EX_MemWrite and not ID_EX_Clear;
+  ID_EX_CmpCode_Clear <= ID_EX_CmpCode when ID_EX_Clear = '0' else
+                         (others => '0');
+  ID_EX_BranchCtrl_Clear <= ID_EX_BranchCtrl when ID_EX_Clear = '0' else
+                            (others => '0');
+
+  ID_EX_RxVal_Forward <= ID_EX_RxVal when ForwardB(16) = '0' else
+                         ForwardB(15 downto 0);
+  
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
-      EX_MEM_RegWrite <= ID_EX_RegWrite and not ID_EX_Clear;
+      EX_MEM_RegWrite <= ID_EX_RegWrite_Clear;
       EX_MEM_RegDataSrc <= ID_EX_RegDataSrc;
-      EX_MEM_CmpCode <= ID_EX_CmpCode;
       EX_MEM_MemDataSrc <= ID_EX_MemDataSrc;
-      EX_MEM_MemRead <= ID_EX_MemRead and not ID_EX_Clear;
-      EX_MEM_MemWrite <= ID_EX_MemWrite and not ID_EX_Clear;
-      EX_MEM_PC_1 <= ID_EX_PC_1;
-      EX_MEM_RihVal <= ID_EX_RihVal;
-      EX_MEM_RxVal <= ID_EX_RxVal;
-      EX_MEM_RyVal <= ID_EX_RyVal;
-      EX_MEM_ZeroImm <= ID_EX_ZeroImm;
+      EX_MEM_MemRead <= ID_EX_MemRead_Clear;
+      EX_MEM_MemWrite <= ID_EX_MemWrite_Clear;
     end if;
   end process;
 
@@ -507,17 +523,21 @@ begin  -- CPU_Arch
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
-      case Forward1(18) is
+      case Forward1(19) is
         when '1' =>
           operand1 <= Forward1(15 downto 0);
         when '0' =>
-          case Forward1(17 downto 16) is
-            when "00" =>                -- Rx
+          case Forward1(18 downto 16) is
+            when "000" =>               -- 0
+              operand1 <= (others => '0');
+            when "001" =>               -- Rx
               operand1 <= ID_EX_RxVal;
-            when "01" =>                -- Ry
-              operand1 <= ID_EX_RyVal;
-            when "10" =>                -- Rsp
+            when "010" =>               -- Rsp
               operand1 <= ID_EX_RspVal;
+            when "011" =>               -- PC_1
+              operand1 <= ID_EX_PC_1;
+            when "100" =>               -- ZeroImm
+              operand1 <= ID_EX_ZeroImm;
             when others => null;
           end case;
         when others => null;
@@ -534,11 +554,13 @@ begin  -- CPU_Arch
           operand2 <= Forward2(15 downto 0);
         when '0' =>
           case Forward2(17 downto 16) is
-            when "00" =>                -- Rx
-              operand2 <= ID_EX_RxVal;
+            when "00" =>                -- 0
+              operand2 <= (others => '0');
             when "01" =>                -- Ry
               operand2 <= ID_EX_RyVal;
-            when "10" =>                -- SignImm
+            when "10" =>                -- IH
+              operand2 <= ID_EX_RihVal;
+            when "11" =>                -- SignImm
               operand2 <= ID_EX_SignImm;
             when others => null;
           end case;
@@ -560,7 +582,7 @@ begin  -- CPU_Arch
           EX_MEM_Rd <= '0' & ID_EX_Rz;
         when "011" =>                   -- Rsp
           EX_MEM_Rd <= "1000";
-        when "100" =>                   -- Rt
+        when "100" =>                   -- Rt(but useless)
           EX_MEM_Rd <= "1001";
         when "101" =>                   -- Rih
           EX_MEM_Rd <= "1010";
@@ -572,11 +594,11 @@ begin  -- CPU_Arch
   PC_Unit : PCUnit
     port map (
       CPU_CLK     => CPU_CLK,
-      BranchCtrl  => ID_EX_BranchCtrl,
+      BranchCtrl  => ID_EX_BranchCtrl_Clear,
       PC_1        => ID_EX_PC_1,
       SignImm     => ID_EX_SignImm,
-      RxVal       => ID_EX_RxVal,
-      RtVal       => ID_EX_RtVal,
+      RxVal       => ID_EX_RxVal_Forward,
+      RtVal       => Rt,
       PC_New      => PC_New,
       PC_Src      => PC_Src,
       Force_Nop   => Force_Nop_B,
@@ -590,24 +612,8 @@ begin  -- CPU_Arch
       operand1 => operand1,
       operand2 => operand2,
       result   => EX_MEM_ALU_Result,
-      zero     => EX_MEM_Zero,
-      neg      => EX_MEM_Neg
-      );
-
-  ForwUnit : ForwardingUnit
-    port map (
-      ID_EX_Rx          => ID_EX_Rx,
-      ID_EX_Ry          => ID_EX_Ry,
-      ALU_Src1          => ID_EX_ALU_Src1,
-      ALU_Src2          => ID_EX_ALU_Src2,
-      EX_MEM_ALU_Result => EX_MEM_ALU_Result,
-      EX_MEM_Rd         => EX_MEM_Rd,
-      EX_MEM_RegWrite   => EX_MEM_RegWrite,
-      MEM_WB_ALU_Result => MEM_WB_ALU_Result,
-      MEM_WB_Rd         => MEM_WB_Rd,
-      MEM_WB_RegWrite   => MEM_WB_RegWrite,
-      Forward1          => Forward1,
-      Forward2          => Forward2
+      zero     => zero,
+      neg      => neg
       );
 
   -----------------------------------------------------------------------------
@@ -618,12 +624,8 @@ begin  -- CPU_Arch
   begin  -- process
     if rising_edge(CPU_CLK) then
       MEM_WB_RegWrite <= EX_MEM_RegWrite;
+      MEM_WB_RegDataSrc <= EX_MEM_RegDataSrc;
       MEM_WB_ALU_Result <= EX_MEM_ALU_Result;
-      MEM_WB_PC_1 <= EX_MEM_PC_1;
-      MEM_WB_RihVal <= EX_MEM_RihVal;
-      MEM_WB_RxVal <= EX_MEM_RxVal;
-      MEM_WB_RyVal <= EX_MEM_RyVal;
-      MEM_WB_ZeroImm <= EX_MEM_ZeroImm;
       MEM_WB_Rd <= EX_MEM_Rd;
     end if;
   end process;
@@ -632,24 +634,20 @@ begin  -- CPU_Arch
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
-      if EX_MEM_MemDataSrc = '0' then
-        wMemData <= EX_MEM_RxVal;
-      else
-        wMemData <= EX_MEM_RyVal;
-      end if;
+      case ForwardDM(17 downto 16) is
+        when "00" =>
+          wMemData <= EX_MEM_RxVal;
+        when "01" =>
+          wMemData <= EX_MEM_RyVal;
+        when "10" =>
+          wMemData <= ForwardDM(15 downto 0);
+        when "11" =>
+          wMemData <= ForwardDM(15 downto 0);
+        when others => null;
+      end case;
     end if;
   end process;
   
-  RegData : RegDataUnit
-    port map (
-      CPU_CLK     => CPU_CLK,
-      RegDataSrc  => EX_MEM_RegDataSrc,
-      CmpCode     => EX_MEM_CmpCode,
-      zero        => EX_MEM_Zero,
-      neg         => EX_MEM_Neg,
-      RegDataCtrl => MEM_WB_RegDataCtrl
-      );
-
   DataMem : DM
     port map (
       clk50     => clk50,
@@ -666,21 +664,24 @@ begin  -- CPU_Arch
       wrn       => wrn,
       MemOutput => MEM_WB_MemOutput
       );
-  
+
+  Forward_DM : ForwardingDMUnit
+    port map (
+      MemDataSrc => EX_MEM_MemDataSrc,
+      Rx         => EX_MEM_Rx,
+      Ry         => EX_MEM_Ry,
+      RegWrite   => MEM_WB_RegWrite,
+      ALU_Result => MEM_WB_ALU_Result,
+      Rd         => MEM_WB_Rd,
+      Forward    => ForwardDM
+      );
   -----------------------------------------------------------------------------
   -- MEM / WB
   -----------------------------------------------------------------------------
 
   RegWrite <= MEM_WB_RegWrite;
   Rd <= MEM_WB_Rd;
-  wData <= MEM_WB_ALU_Result when MEM_WB_RegDataCtrl = "0000" else
-           MEM_WB_MemOutput when MEM_WB_RegDataCtrl = "0001" else
-           MEM_WB_PC_1 when MEM_WB_RegDataCtrl = "0010" else
-           MEM_WB_RihVal when MEM_WB_RegDataCtrl = "0011" else
-           MEM_WB_RxVal when MEM_WB_RegDataCtrl = "0100" else
-           MEM_WB_RyVal when MEM_WB_RegDataCtrl = "0101" else
-           MEM_WB_ZeroImm when MEM_WB_RegDataCtrl = "0110" else
-           X"0000" when MEM_WB_RegDataCtrl = "0111" else
-           X"0001" when MEM_WB_RegDataCtrl = "1000";
+  wData <= MEM_WB_ALU_Result when MEM_WB_RegDataSrc = '0' else
+           MEM_WB_MemOutput;
            
 end CPU_Arch;

@@ -25,44 +25,33 @@ architecture IM_Arch of IM is
 
   signal state : std_logic := '0';
   signal currInstr : std_logic_vector(15 downto 0) := X"0800";
-  signal instrCnt : std_logic_vector(3 downto 0) := "0000";
+  signal LowPC : std_logic_vector(3 downto 0) := "0000";
   
 begin  -- IM_Arch
 
   Ram2EN <= '0';
   Ram2OE <= '0';
   Ram2RW <= '1';
-  
-  --currInstr <= "01001" & "001" & "00100010" when instrCnt = "0000" else
-  --             -- ADDIU R1 0x22.  R1 = R1 + 0x22 = 0x22
-               
-  --             "01000" & "001" & "010" & "0" & "0111" when instrCnt = "0001" else
-  --             -- ADDIU3 R1 R2 0x7.  R2 = R1 + 0x6 = 0x29
 
-  --             X"0800" when instrCnt = "0010" else
-  --             X"0800" when instrCnt = "0011" else
-  --             X"0800" when instrCnt = "0100" else
-               
-  --             "11101" & "001" & "010" & "01100" when instrCnt = "0101" else
-  --             -- AND R1 R2.  R1 = R1 & R2 = 0x20
+  LowPC <= PC(3 downto 0);
   
-  --             X"0800";
+  currInstr <= "01101" & "001" & "00101010" when LowPC = "0000" else
+               -- LI R1 0x2A.  R1 = 0x2A
 
-  
-  currInstr <= "01001" & "001" & "00100010" when instrCnt = "0000" else
-               -- ADDIU R1 0x22.  R1 = R1 + 0x22 = 0x22
+               "01101" & "010" & "00000100" when LowPC = "0001" else
+               -- LI R2 0x4   R2 = 0x4
+
+               "11101" & "010" & "00000000" when LowPC = "0010" else
+               -- JR R2
                
-               "01000" & "001" & "010" & "0" & "0110" when instrCnt = "0001" else
-               -- ADDIU3 R1 R2 0x6.  R2 = R1 + 0x6 = 0x28
-               
-               "11100" & "001" & "010" & "011" & "01" when instrCnt = "0011" else
-               -- ADDU R1 R2 R3.  R3 = R1 + R2 = 0x4A
-               
-               "11101" & "010" & "011" & "01100" when instrCnt = "0100" else
-               -- AND R2 R3.  R2 = R2 & R3 = 0x8
+               "11100" & "001" & "010" & "011" & "01" when LowPC = "0011" else
+               -- ADDU R1 R2 R3.  R3 = R1 + R2 = 0x43
+
+               "01101" & "011" & "10011001" when LowPC = "0100" else
+               -- LI R3 0x99   R3 = 0x99
                
                X"0800";
-  
+
   process (clk50)
   begin  -- process
     if rising_edge(clk50) then
@@ -75,8 +64,6 @@ begin  -- IM_Arch
 --          instruc <= Ram2Data;
           instruc <= currInstr;
           state <= '0';
-          instrCnt <= instrCnt + 1;
-          
         when others => null;
       end case;
     end if;

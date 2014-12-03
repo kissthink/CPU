@@ -20,13 +20,11 @@ entity RegisterFile is
     R6_out   : out std_logic_vector(15 downto 0);
     R7_out   : out std_logic_vector(15 downto 0);
     Rsp_out  : out std_logic_vector(15 downto 0);
-    Rt_out   : out std_logic_vector(15 downto 0);
     Rih_out  : out std_logic_vector(15 downto 0);
     
     RxVal    : out std_logic_vector(15 downto 0);
     RyVal    : out std_logic_vector(15 downto 0);
     RspVal   : out std_logic_vector(15 downto 0);
-    RtVal    : out std_logic_vector(15 downto 0);
     RihVal   : out std_logic_vector(15 downto 0)
     );
 
@@ -45,7 +43,6 @@ architecture RegisterFile_Arch of RegisterFile is
   signal R6 : std_logic_vector(15 downto 0) := (others => '0');
   signal R7 : std_logic_vector(15 downto 0) := (others => '0');
   signal Rsp : std_logic_vector(15 downto 0) := (others => '0');
-  signal Rt  : std_logic_vector(15 downto 0) := (others => '0');
   signal Rih : std_logic_vector(15 downto 0) := (others => '0');
   
 begin  -- RegisterFile_Arch
@@ -59,7 +56,6 @@ begin  -- RegisterFile_Arch
   R6_out <= R6;
   R7_out <= R7;
   Rsp_out <= Rsp;
-  Rt_out <= Rt;
   Rih_out <= Rih;
 
   process (CPU_CLK)
@@ -85,7 +81,7 @@ begin  -- RegisterFile_Arch
           when "0110" => R6 <= wData;
           when "0111" => R7 <= wData;
           when "1000" => Rsp <= wData;
-          when "1001" => Rt <= wData;
+          when "1001" => null;          -- Rt
           when "1010" => Rih <= wData;
           when others => null;
         end case;
@@ -93,12 +89,11 @@ begin  -- RegisterFile_Arch
     end if;
   end process;
 
-  -- Read Rsp / Rt / Rih
+  -- Read Rsp / Rih
   process (CPU_CLK)
   begin  -- process
     if falling_edge(CPU_CLK) then
       RspVal <= Rsp;
-      RtVal <= Rt;
       RihVal <= Rih;
     end if;
   end process;

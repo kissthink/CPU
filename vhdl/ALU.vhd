@@ -25,8 +25,8 @@ architecture ALU_Arch of ALU is
   
 begin  -- ALU_Arch
 
-  shiftbits <= "01000" when operand2(2 downto 0) = "000" else
-               "00" & operand2(2 downto 0);
+  shiftbits <= "01000" when operand1(2 downto 0) = "000" else
+               "00" & operand1(2 downto 0);
 
   process (CPU_CLK)
   begin  -- process
@@ -39,9 +39,9 @@ begin  -- ALU_Arch
             operand1 - operand2 when op = "010" else
             operand1 and operand2 when op = "011" else
             operand1 or operand2 when op = "100" else
-            to_stdlogicvector(to_bitvector(operand1) sll conv_integer(shiftbits)) when op = "101" else
-            to_stdlogicvector(to_bitvector(operand1) sra conv_integer(shiftbits)) when op = "110" else
-            not operand1 when op = "111";
+            to_stdlogicvector(to_bitvector(operand2) sll conv_integer(shiftbits)) when op = "101" else
+            to_stdlogicvector(to_bitvector(operand2) sra conv_integer(shiftbits)) when op = "110" else
+            not operand2 when op = "111";
 
   result <= output;
   
