@@ -35,27 +35,18 @@ begin  -- IM_Arch
 
   LowPC <= PC(3 downto 0);
   
-  currInstr <= "01101" & "001" & "00101010" when LowPC = "0000" else
-               -- LI R1 0x2A.  R1 = 0x2A
+  currInstr <= "01101" & "001" & "00000100" when LowPC = "0000" else
+               -- LI R1 0x4.  R1 = 0x4
 
                "01101" & "010" & "00011001" when LowPC = "0001" else
                -- LI R2 0x19  R2 = 0x19
                
-               "01101" & "011" & "00011001" when LowPC = "0010" else
-               -- LI R3 0x19  R3 = 0x19
+               "11011" & "001" & "010" & "00011" when LowPC = "0010" else
+               -- SW R1 R2 0x3    MEM(4 + 3) = 0x19
 
-               "11101" & "001" & "010" & "01010" when LowPC = "0011" else
-               -- CMP R1 R2  T = 1
+               "10011" & "001" & "011" & "00011" when LowPC = "0011" else
+               -- LW R1 R3 0x3    R3 = MEM(4 + 3) = 0x19
                
-               "01100" & "000" & "00000001" when LowPC = "0100" else
-               -- BTEQZ 0x1   PC = 6
-
-               "01101" & "100" & "01001000" when LowPC = "0101" else
-               -- LI R4 0x48
-
-               "01101" & "100" & "00011100" when LowPC = "0110" else
-               -- LI R4 0x1C
-
                X"0800";
 
   process (clk50)

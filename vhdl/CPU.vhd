@@ -322,6 +322,8 @@ begin  -- CPU_Arch
             EX_MEM_RegWrite & EX_MEM_RegDataSrc & "111" & EX_MEM_MemDataSrc & EX_MEM_MemRead & EX_MEM_MemWrite & "0000" & EX_MEM_Rd when input = X"2005" else
             EX_MEM_RxVal when input = X"2006" else
             EX_MEM_RyVal when input = X"2007" else
+            ForwardDM(17 downto 16) & ForwardDM(13 downto 0) when input = X"2008" else
+            '0' & EX_MEM_Rx & '0' & EX_MEM_Ry & X"00" when input = X"2009" else
 
             MEM_WB_RegWrite & "000" & MEM_WB_RegDataSrc & "000" & MEM_WB_Rd & "0000" when input = X"3000" else
             wMemData when input = X"3001" else
@@ -520,6 +522,8 @@ begin  -- CPU_Arch
       EX_MEM_MemDataSrc <= ID_EX_MemDataSrc;
       EX_MEM_MemRead <= ID_EX_MemRead_Clear;
       EX_MEM_MemWrite <= ID_EX_MemWrite_Clear;
+      EX_MEM_Rx <= ID_EX_Rx;
+      EX_MEM_Ry <= ID_EX_Ry;
     end if;
   end process;
 
@@ -620,6 +624,10 @@ begin  -- CPU_Arch
       neg      => neg
       );
 
+  wMemData <= EX_MEM_RxVal when ForwardDM(17 downto 16) = "00" else
+              EX_MEM_RyVal when ForwardDM(17 downto 16) = "01" else
+              ForwardDM(15 downto 0);
+  
   -----------------------------------------------------------------------------
   -- EX / MEM
   -----------------------------------------------------------------------------
@@ -634,24 +642,6 @@ begin  -- CPU_Arch
     end if;
   end process;
 
-  -- out : wMemData
-  process (CPU_CLK)
-  begin  -- process
-    if rising_edge(CPU_CLK) then
-      case ForwardDM(17 downto 16) is
-        when "00" =>
-          wMemData <= EX_MEM_RxVal;
-        when "01" =>
-          wMemData <= EX_MEM_RyVal;
-        when "10" =>
-          wMemData <= ForwardDM(15 downto 0);
-        when "11" =>
-          wMemData <= ForwardDM(15 downto 0);
-        when others => null;
-      end case;
-    end if;
-  end process;
-  
   DataMem : DM
     port map (
       clk50     => clk50,
