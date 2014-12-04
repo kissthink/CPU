@@ -33,8 +33,6 @@ begin  -- IM_Arch
   Ram2OE <= '0';
   Ram2RW <= '1';
 
-  LowPC <= PC(3 downto 0);
-  
   currInstr <= "01101" & "001" & "00000100" when LowPC = "0000" else
                -- LI R1 0x4.  R1 = 0x4
 
@@ -46,6 +44,12 @@ begin  -- IM_Arch
 
                "10011" & "001" & "011" & "00011" when LowPC = "0011" else
                -- LW R1 R3 0x3    R3 = MEM(4 + 3) = 0x19
+
+               "11101" & "100" & "011" & "01111" when LowPC = "0100" else
+               -- NOT R4 R3      R4 = ~R3 = 0xFFE6
+
+               "00110" & "101" & "100" & "00100" when LowPC = "0101" else
+               -- SLLV R5 R4     R5 = R4 << 4 = 0xFE60
                
                X"0800";
 
@@ -56,6 +60,7 @@ begin  -- IM_Arch
         when '0' =>
           Ram2Data <= (others => 'Z');
           Ram2Addr <= "00" & PC;
+          LowPC <= PC(3 downto 0);
           state <= '1';
         when '1' =>
 --          instruc <= Ram2Data;

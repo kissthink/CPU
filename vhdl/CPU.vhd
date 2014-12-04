@@ -128,7 +128,7 @@ architecture CPU_Arch of CPU is
       ALU_Src1          : in std_logic_vector(2 downto 0);
       ALU_Src2          : in std_logic_vector(1 downto 0);
       EX_MEM_ALU_Result : in std_logic_vector(15 downto 0);
-      MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
+      wData             : in std_logic_vector(15 downto 0);
       EX_MEM_Rd         : in std_logic_vector(3 downto 0);
       EX_MEM_RegWrite   : in std_logic;
       MEM_WB_Rd         : in std_logic_vector(3 downto 0);
@@ -209,14 +209,15 @@ architecture CPU_Arch of CPU is
   signal Rt  : std_logic_vector(15 downto 0) := (others => '0');  -- not common
   signal Rih : std_logic_vector(15 downto 0) := (others => '0');
   
-  signal PC : std_logic_vector(15 downto 0) := X"0000";
-  signal PC_tmp : std_logic_vector(15 downto 0) := X"0000";
+  signal PC : std_logic_vector(15 downto 0) := X"FFFF";
+--  signal PC_tmp : std_logic_vector(15 downto 0) := X"FFFF";
+  signal PC_Predict : std_logic_vector(15 downto 0) := X"0000";
   signal PC_1 : std_logic_vector(15 downto 0) := X"0000";
   signal PC_Src : std_logic := '0';
   signal PC_New : std_logic_vector(15 downto 0) := X"0000";
   signal IF_ID_PC_1 : std_logic_vector(15 downto 0) := X"0000";
   signal IF_ID_Instruc : std_logic_vector(15 downto 0) := X"0800";
-  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0) := X"0800";
+--  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0) := X"0800";
   signal IF_ID_Keep : std_logic := '0';
 
   signal RegWrite : std_logic := '0';
@@ -292,12 +293,12 @@ begin  -- CPU_Arch
   lDigits <= PC_Src & IF_ID_Keep & Force_Nop_B & ForceZero & Force_Nop_L & ID_EX_Clear & CPU_CLK;
   
   output <= PC when input = X"0000" else
-            PC_tmp when input = X"0001" else
+            PC_Predict when input = X"0001" else
             PC_1 when input = X"0002" else
             PC_New when input = X"0003" else
             IF_ID_PC_1 when input = X"0004" else
             IF_ID_Instruc when input = X"0005" else
-            IF_ID_Instruc_tmp when input = X"0006" else
+--            IF_ID_Instruc_tmp when input = X"0006" else
 
             ID_EX_RegWrite_Clear & ID_EX_MemRead_Clear & ID_EX_MemWrite_Clear & ID_EX_CmpCode_Clear & "111" & ID_EX_MemDataSrc & ID_EX_RegDataSrc  & "111" & ID_EX_BranchCtrl_Clear when input = X"1000" else
             ID_EX_ALU_Op & ID_EX_ALU_Src1 & ID_EX_ALU_Src2 & "0" & RegDst & '0' & ID_EX_RegDst when input = X"1001" else
@@ -355,24 +356,22 @@ begin  -- CPU_Arch
   -- Start / IF
   -----------------------------------------------------------------------------
 
+  PC_1 <= PC + 1;
+
+  IF_ID_PC_1 <= PC_1;
+
+  PC_Predict <= PC_1 when IF_ID_Keep = '0' else
+                PC;
+  
   process (CPU_CLK)
   begin  -- process
     if rising_edge(CPU_CLK) then
-      PC_1 <= PC_1 + 1;
-    end if;
-  end process;
-
-  IF_ID_PC_1 <= PC_1 when IF_ID_Keep = '0';
-  PC <= PC_tmp when IF_ID_Keep = '0';
-  IF_ID_Instruc <= IF_ID_Instruc_tmp when IF_ID_Keep = '0';
-
-  process (CPU_CLK)
-  begin  -- process
-    if rising_edge(CPU_CLK) then
-      if PC_Src = '0' then
-        PC_tmp <= PC_1;
-      else
-        PC_tmp <= PC_New;
+      if IF_ID_Keep = '0' then
+        if PC_Src = '0' then
+          PC <= PC_1;
+        else
+          PC <= PC_New;
+        end if;
       end if;
     end if;
   end process;
@@ -380,13 +379,13 @@ begin  -- CPU_Arch
   InstrMem : IM
     port map (
       clk50    => clk50,
-      PC       => PC,
+      PC       => PC_Predict,
       Ram2Addr => Ram2Addr,
       Ram2Data => Ram2Data,
       Ram2OE   => Ram2OE,
       Ram2RW   => Ram2RW,
       Ram2EN   => Ram2EN,
-      instruc  => IF_ID_Instruc_tmp
+      instruc  => IF_ID_Instruc
       );
   -----------------------------------------------------------------------------
   -- IF / ID
@@ -481,7 +480,7 @@ begin  -- CPU_Arch
       ALU_Src1          => ID_EX_ALU_Src1,
       ALU_Src2          => ID_EX_ALU_Src2,
       EX_MEM_ALU_Result => EX_MEM_ALU_Result,
-      MEM_WB_ALU_Result => MEM_WB_ALU_Result,
+      wData             => wData,
       EX_MEM_Rd         => EX_MEM_Rd,
       EX_MEM_RegWrite   => EX_MEM_RegWrite,
       MEM_WB_Rd         => MEM_WB_Rd,
@@ -665,7 +664,7 @@ begin  -- CPU_Arch
       Rx         => EX_MEM_Rx,
       Ry         => EX_MEM_Ry,
       RegWrite   => MEM_WB_RegWrite,
-      ALU_Result => MEM_WB_ALU_Result,
+      ALU_Result => wData,
       Rd         => MEM_WB_Rd,
       Forward    => ForwardDM
       );

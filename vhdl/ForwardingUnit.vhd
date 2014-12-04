@@ -10,7 +10,7 @@ entity ForwardingUnit is
     ALU_Src2          : in std_logic_vector(1 downto 0);
     
     EX_MEM_ALU_Result : in std_logic_vector(15 downto 0);
-    MEM_WB_ALU_Result : in std_logic_vector(15 downto 0);
+    wData             : in std_logic_vector(15 downto 0);
     
     EX_MEM_Rd         : in std_logic_vector(3 downto 0);
     EX_MEM_RegWrite   : in std_logic;
@@ -54,21 +54,21 @@ begin  -- ForwardingUnit_Arch
   Rb <= '0' & ID_EX_Rx;
 
   ForwardData1 <= EX_MEM_ALU_Result when EX_MEM_RegWrite = '1' and EX_MEM_Rd = Rs else
-                  MEM_WB_ALU_Result when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rs else
+                  wData when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rs else
                   (others => '0');
   UseForward1 <= '1' when EX_MEM_RegWrite = '1' and EX_MEM_Rd = Rs else
                  '1' when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rs else
                  '0';
 
   ForwardData2 <= EX_MEM_ALU_Result when EX_MEM_RegWrite = '1' and EX_MEM_Rd = Rt else
-                  MEM_WB_ALU_Result when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rt else
+                  wData when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rt else
                   (others => '0');
   UseForward2 <= '1' when EX_MEM_RegWrite = '1' and EX_MEM_Rd = Rt else
                  '1' when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rt else
                  '0';
 
   ForwardDataB <= EX_MEM_ALU_Result when EX_MEM_RegWrite = '1' and EX_MEM_Rd = Rb else
-                  MEM_WB_ALU_Result when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rb else
+                  wData when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rb else
                   (others => '0');
   UseForwardB <= '1' when EX_MEM_RegWrite = '1' and EX_MEM_Rd = Rb else
                  '1' when MEM_WB_RegWrite = '1' and MEM_WB_Rd = Rb else

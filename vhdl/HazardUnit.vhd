@@ -28,7 +28,7 @@ begin  -- HazardUnit_Arch
         "111";
   
   enable <= '1' when ID_EX_MemRead = '1' and (Rs = IF_ID_Rx or Rs = IF_ID_Ry) else
-               '0';
+            '0';
 
   IF_ID_Keep <= enable;
   Force_Nop <= enable;
