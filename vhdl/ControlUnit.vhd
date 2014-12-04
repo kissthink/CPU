@@ -32,8 +32,8 @@ begin  -- ControlUnit_Arch
   RegDataSrc <= output(19);
   CmpCode <= output(18 downto 17);
   MemDataSrc <= output(16);
-  MemWrite <= output(15);
-  MemRead <= output(14);
+  MemWrite <= output(15) when falling_edge(CPU_CLK);
+  MemRead <= output(14) when falling_edge(CPU_CLK);
   BranchCtrl <= output(13 downto 11);
   ALU_Op <= output(10 downto 8);
   ALU_Src1 <= output(7 downto 5);

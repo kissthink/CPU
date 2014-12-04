@@ -360,7 +360,8 @@ begin  -- CPU_Arch
 
   IF_ID_PC_1 <= PC_1;
 
-  PC_Predict <= PC_1 when IF_ID_Keep = '0' else
+  PC_Predict <= PC_1 when IF_ID_Keep = '0' and PC_Src = '0' else
+                PC_New when IF_ID_Keep = '0' and PC_Src = '1' else
                 PC;
   
   process (CPU_CLK)
@@ -519,10 +520,16 @@ begin  -- CPU_Arch
       EX_MEM_RegWrite <= ID_EX_RegWrite_Clear;
       EX_MEM_RegDataSrc <= ID_EX_RegDataSrc;
       EX_MEM_MemDataSrc <= ID_EX_MemDataSrc;
-      EX_MEM_MemRead <= ID_EX_MemRead_Clear;
-      EX_MEM_MemWrite <= ID_EX_MemWrite_Clear;
       EX_MEM_Rx <= ID_EX_Rx;
       EX_MEM_Ry <= ID_EX_Ry;
+    end if;
+  end process;
+
+  process (CPU_CLK)
+  begin  -- process
+    if falling_edge(CPU_CLK) then
+      EX_MEM_MemRead <= ID_EX_MemRead_Clear;
+      EX_MEM_MemWrite <= ID_EX_MemWrite_Clear;
     end if;
   end process;
 
