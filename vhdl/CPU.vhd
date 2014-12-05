@@ -24,8 +24,12 @@ entity CPU is
 
     rdn       : out   std_logic;
     wrn       : out   std_logic;
+    tbre      : in    std_logic;
+    tsre      : in    std_logic;
+    dready    : in    std_logic;
 
     lDigits   : out   std_logic_vector(6 downto 0);
+    rDigits   : out   std_logic_vector(4 downto 0);
     output    : out   std_logic_vector(15 downto 0)
     );
 
@@ -35,7 +39,7 @@ architecture CPU_Arch of CPU is
 
   component IM
     port (
-      clk50     : in    std_logic;
+      clk       : in    std_logic;
       PC        : in    std_logic_vector(15 downto 0);
       Ram2Addr  : out   std_logic_vector(17 downto 0);
       Ram2Data  : inout std_logic_vector(15 downto 0);
@@ -168,7 +172,7 @@ architecture CPU_Arch of CPU is
 
   component DM
     port (
-      clk50     : in    std_logic;
+      clk       : in    std_logic;
       wMemAddr  : in    std_logic_vector(15 downto 0);
       wMemData  : in    std_logic_vector(15 downto 0);
       MemRead   : in    std_logic;
@@ -179,6 +183,10 @@ architecture CPU_Arch of CPU is
       Ram1RW    : out   std_logic;
       Ram1EN    : out   std_logic;
       rdn, wrn  : out   std_logic;
+      tbre      : in    std_logic;
+      tsre      : in    std_logic;
+      dready    : in    std_logic;
+      ComSig    : out   std_logic_vector(1 downto 0);
       MemOutput : out   std_logic_vector(15 downto 0)
       );
   end component;
@@ -195,7 +203,12 @@ architecture CPU_Arch of CPU is
       );
   end component;
 
-  
+
+--  signal counter : std_logic_vector(23 downto 0) := X"000000";
+--  signal clk25 : std_logic := '0';
+--  signal clk12 : std_logic := '0';
+  signal ComSig : std_logic_vector(1 downto 0) := "11";
+  signal Double_CPU_CLK : std_logic := '0';
   signal CPU_CLK : std_logic := '0';
   signal R0 : std_logic_vector(15 downto 0) := (others => '0');
   signal R1 : std_logic_vector(15 downto 0) := (others => '0');
@@ -290,6 +303,8 @@ architecture CPU_Arch of CPU is
   
 begin  -- CPU_Arch
 
+  rDigits <= ComSig & tbre & tsre & dready;
+  
   lDigits <= PC_Src & IF_ID_Keep & Force_Nop_B & ForceZero & Force_Nop_L & ID_EX_Clear & CPU_CLK;
   
   output <= PC when input = X"0000" else
@@ -344,13 +359,19 @@ begin  -- CPU_Arch
             Rih when input = X"400A" else
             
             (others => '1');
+
+  --clk25 <= not clk25 when rising_edge(clk50);
+
+  --clk12 <= not clk12 when rising_edge(clk25);
+
+  --CPU_CLK <= not CPU_CLK when rising_edge(clk12);
+
+--  counter <= counter + 1 when rising_edge(clk50);
+
+--  Double_CPU_CLK <= counter(5);
+  Double_CPU_CLK <= clk50;
   
-  process (clk50)
-  begin  -- process
-    if rising_edge(clk50) then
-      CPU_CLK <= not CPU_CLK;
-    end if;
-  end process;
+  CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
   -----------------------------------------------------------------------------
   -- Start / IF
@@ -379,7 +400,7 @@ begin  -- CPU_Arch
   
   InstrMem : IM
     port map (
-      clk50    => clk50,
+      clk      => Double_CPU_CLK,
       PC       => PC_Predict,
       Ram2Addr => Ram2Addr,
       Ram2Data => Ram2Data,
@@ -650,7 +671,7 @@ begin  -- CPU_Arch
 
   DataMem : DM
     port map (
-      clk50     => clk50,
+      clk       => Double_CPU_CLK,
       wMemAddr  => EX_MEM_ALU_Result,
       wMemData  => wMemData,
       MemRead   => EX_MEM_MemRead,
@@ -662,6 +683,10 @@ begin  -- CPU_Arch
       Ram1EN    => Ram1EN,
       rdn       => rdn,
       wrn       => wrn,
+      tbre      => tbre,
+      tsre      => tsre,
+      dready    => dready,
+      ComSig    => ComSig,
       MemOutput => MEM_WB_MemOutput
       );
 
