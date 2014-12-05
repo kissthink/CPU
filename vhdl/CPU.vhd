@@ -101,7 +101,7 @@ architecture CPU_Arch of CPU is
   component ZeroExt
     port (
       CPU_CLK : in  std_logic;
-      input   : in  std_logic_vector(7 downto 0);
+      input   : in  std_logic_vector(15 downto 0);
       output  : out std_logic_vector(15 downto 0)
       );
   end component;
@@ -204,7 +204,7 @@ architecture CPU_Arch of CPU is
   end component;
 
 
---  signal counter : std_logic_vector(23 downto 0) := X"000000";
+  signal counter : std_logic_vector(23 downto 0) := X"000000";
 --  signal clk25 : std_logic := '0';
 --  signal clk12 : std_logic := '0';
   signal ComSig : std_logic_vector(1 downto 0) := "11";
@@ -366,10 +366,10 @@ begin  -- CPU_Arch
 
   --CPU_CLK <= not CPU_CLK when rising_edge(clk12);
 
---  counter <= counter + 1 when rising_edge(clk50);
+  counter <= counter + 1 when rising_edge(clk50);
 
---  Double_CPU_CLK <= counter(5);
-  Double_CPU_CLK <= clk50;
+  Double_CPU_CLK <= counter(5);
+--  Double_CPU_CLK <= clk50;
   
   CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
@@ -473,7 +473,7 @@ begin  -- CPU_Arch
   ZeroExtend : ZeroExt
     port map (
       CPU_CLK => CPU_CLK,
-      input   => IF_ID_Instruc(7 downto 0),
+      input   => IF_ID_Instruc,
       output  => ID_EX_ZeroImm
       );
 
@@ -512,9 +512,6 @@ begin  -- CPU_Arch
       ForwardB          => ForwardB
       );
   
-  EX_MEM_RxVal <= ID_EX_RxVal;
-  EX_MEM_RyVal <= ID_EX_RyVal;
-
   ID_EX_RegWrite_Clear <= ID_EX_RegWrite and not ID_EX_Clear;
   ID_EX_MemRead_Clear <= ID_EX_MemRead and not ID_EX_Clear;
   ID_EX_MemWrite_Clear <= ID_EX_MemWrite and not ID_EX_Clear;
@@ -543,6 +540,16 @@ begin  -- CPU_Arch
       EX_MEM_MemDataSrc <= ID_EX_MemDataSrc;
       EX_MEM_Rx <= ID_EX_Rx;
       EX_MEM_Ry <= ID_EX_Ry;
+      if '0' & ID_EX_Rx = Rd then
+        EX_MEM_RxVal <= wData;
+      else
+        EX_MEM_RxVal <= ID_EX_RxVal;
+      end if;
+      if '0' & ID_EX_Ry = Rd then
+        EX_MEM_RyVal <= wData;
+      else
+        EX_MEM_RyVal <= ID_EX_RyVal;
+      end if;
     end if;
   end process;
 
