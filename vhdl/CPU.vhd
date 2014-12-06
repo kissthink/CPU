@@ -28,8 +28,17 @@ entity CPU is
     tsre      : in    std_logic;
     dready    : in    std_logic;
 
+    flash_byte : out std_logic;
+    flash_vpen : out std_logic;
+    flash_ce : out std_logic;
+    flash_oe : out std_logic;
+    flash_we : out std_logic;
+    flash_rp : out std_logic;
+    flash_addr : out std_logic_vector(22 downto 1);
+    flash_data : inout std_logic_vector(15 downto 0);
+    
     lDigits   : out   std_logic_vector(6 downto 0);
-    rDigits   : out   std_logic_vector(4 downto 0);
+    rDigits   : out   std_logic_vector(5 downto 0);
     output    : out   std_logic_vector(15 downto 0)
     );
 
@@ -39,14 +48,22 @@ architecture CPU_Arch of CPU is
 
   component IM
     port (
-      clk       : in    std_logic;
+      rst       : in std_logic;
+      clk50     : in    std_logic;
       PC        : in    std_logic_vector(15 downto 0);
-      Ram2Addr  : out   std_logic_vector(17 downto 0);
+      instruc   : out   std_logic_vector(15 downto 0);
+      isok_out  : out std_logic;
       Ram2Data  : inout std_logic_vector(15 downto 0);
-      Ram2OE    : out   std_logic;
-      Ram2RW    : out   std_logic;
-      Ram2EN    : out   std_logic;
-      instruc   : out   std_logic_vector(15 downto 0)
+      Ram2Addr  : out std_logic_vector(17 downto 0);			  
+      Ram2OE, Ram2WE, Ram2EN : out std_logic;
+      flash_byte : out std_logic;--BYTE#
+      flash_vpen : out std_logic;
+      flash_ce : out std_logic;
+      flash_oe : out std_logic;
+      flash_we : out std_logic;
+      flash_rp : out std_logic;
+      flash_addr : out std_logic_vector(22 downto 1);
+      flash_data : inout std_logic_vector(15 downto 0)
       );
   end component;
 
@@ -204,9 +221,11 @@ architecture CPU_Arch of CPU is
   end component;
 
 
+  signal ComSig : std_logic_vector(1 downto 0) := "11";
+  signal IMReady : std_logic := '0';
   signal clk25 : std_logic := '0';
   signal clk12 : std_logic := '0';
-  signal ComSig : std_logic_vector(1 downto 0) := "11";
+  signal IM_CLK : std_logic := '0';
   signal Double_CPU_CLK : std_logic := '0';
   signal CPU_CLK : std_logic := '0';
   signal R0 : std_logic_vector(15 downto 0) := (others => '0');
@@ -302,7 +321,7 @@ architecture CPU_Arch of CPU is
   
 begin  -- CPU_Arch
 
-  rDigits <= ComSig & tbre & tsre & dready;
+  rDigits <= IMReady & ComSig & tbre & tsre & dready;
   
   lDigits <= PC_Src & IF_ID_Keep & Force_Nop_B & ForceZero & Force_Nop_L & ID_EX_Clear & CPU_CLK;
   
@@ -363,9 +382,16 @@ begin  -- CPU_Arch
 
   clk12 <= not clk12 when rising_edge(clk25);
 
-  Double_CPU_CLK <= clk12;
+  Double_CPU_CLK <= clk12 when IMReady = '1' else
+                    '0';
 
---  Double_CPU_CLK <= clk50;
+  IM_CLK <= clk12;
+
+  --Double_CPU_CLK <= clk50 when IMReady = '1' else
+  --                  '0';
+  --IM_CLK <= clk50;
+
+
   
   CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
@@ -396,14 +422,24 @@ begin  -- CPU_Arch
   
   InstrMem : IM
     port map (
-      clk      => Double_CPU_CLK,
-      PC       => PC_Predict,
-      Ram2Addr => Ram2Addr,
-      Ram2Data => Ram2Data,
-      Ram2OE   => Ram2OE,
-      Ram2RW   => Ram2RW,
-      Ram2EN   => Ram2EN,
-      instruc  => IF_ID_Instruc
+      rst         => rst,
+      clk50       => IM_CLK,
+      PC          => PC_Predict,
+      instruc     => IF_ID_Instruc,
+      isok_out    => IMReady,
+      Ram2Data    => Ram2Data,
+      Ram2Addr    => Ram2Addr,
+      Ram2OE      => Ram2OE,
+      Ram2WE      => Ram2RW,
+      Ram2EN      => Ram2EN,
+      flash_byte  => flash_byte,
+      flash_vpen  => flash_vpen,
+      flash_ce    => flash_ce,
+      flash_oe    => flash_oe,
+      flash_we    => flash_we,
+      flash_rp    => flash_rp,
+      flash_addr  => flash_addr,
+      flash_data  => flash_data
       );
   -----------------------------------------------------------------------------
   -- IF / ID
