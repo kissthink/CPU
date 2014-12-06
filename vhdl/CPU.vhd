@@ -204,9 +204,8 @@ architecture CPU_Arch of CPU is
   end component;
 
 
-  signal counter : std_logic_vector(23 downto 0) := X"000000";
---  signal clk25 : std_logic := '0';
---  signal clk12 : std_logic := '0';
+  signal clk25 : std_logic := '0';
+  signal clk12 : std_logic := '0';
   signal ComSig : std_logic_vector(1 downto 0) := "11";
   signal Double_CPU_CLK : std_logic := '0';
   signal CPU_CLK : std_logic := '0';
@@ -364,12 +363,9 @@ begin  -- CPU_Arch
 
   --clk12 <= not clk12 when rising_edge(clk25);
 
-  --CPU_CLK <= not CPU_CLK when rising_edge(clk12);
+  --Double_CPU_CLK <= clk12;
 
-  counter <= counter + 1 when rising_edge(clk50);
-
-  Double_CPU_CLK <= counter(5);
---  Double_CPU_CLK <= clk50;
+  Double_CPU_CLK <= clk50;
   
   CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
