@@ -359,13 +359,13 @@ begin  -- CPU_Arch
             
             (others => '1');
 
-  --clk25 <= not clk25 when rising_edge(clk50);
+  clk25 <= not clk25 when rising_edge(clk50);
 
-  --clk12 <= not clk12 when rising_edge(clk25);
+  clk12 <= not clk12 when rising_edge(clk25);
 
-  --Double_CPU_CLK <= clk12;
+  Double_CPU_CLK <= clk12;
 
-  Double_CPU_CLK <= clk50;
+--  Double_CPU_CLK <= clk50;
   
   CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 

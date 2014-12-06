@@ -6,19 +6,8 @@
 LOOP:
 		NOP
 
-		MFPC R3
-		ADDIU R3 0x0003	
-		NOP	
-		B TESTR	
-		NOP
+		LI R1 0x34
 		
-		LI R0 0x00BF 
-		SLL R0 R0 0x0000
-		LW R0 R1 0x0 			; R1 = input_number
-		LI R0 0x00ff 
-		AND R1 R0 
-		NOP
-
 		SLTI R1 0x31			; T = R1 < char(1)
 		BTEQZ BIGEN				; T=0 ==> BIGEN.  big enough
 		NOP
@@ -162,19 +151,6 @@ END:
 		NOP
 		NOP
 		JR R7
-TESTR:	
-	NOP	
-	LI R0 0x00BF 
-	SLL R0 R0 0x0000 
-	ADDIU R0 0x0001 
-	LW R0 R4 0x0000
-	LI R0 0x0002
-	AND R4 R0
-	BEQZ R4 TESTR   ;BF01&2=0  ÔòµÈ´ý	
-	NOP	
-	JR R3
-	NOP
-
 TESTW:	
 	NOP	 		
 	LI R0 0x00BF 

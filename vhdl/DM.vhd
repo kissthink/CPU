@@ -140,6 +140,7 @@ begin  -- DM_Arch
         Ram1RW <= '1';
         rdn <= '1';
         wrn <= '1';
+        state <= '0';
       end if;
     end if;                             -- end rising_edge
   end process;
