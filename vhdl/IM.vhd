@@ -41,6 +41,7 @@ architecture Behavioral of IM is
 	signal ctl_read : std_logic;
 	signal nothing : std_logic;
     signal isok : std_logic := '0';
+    signal flash_clk : std_logic := '0';
   
 	component FlashIO
       port ( 
@@ -68,12 +69,13 @@ architecture Behavioral of IM is
 begin
 
   isok_out <= isok;
+  flash_clk <= not flash_clk when rising_edge(clk50);
   
   flash : FlashIO PORT MAP (
     addr => addr,
     data_in => none,
     data_out => data_out,
-    clk => clk50,
+    clk => flash_clk,
     reset => rst,
     flash_byte => flash_byte,
     flash_vpen => flash_vpen,
@@ -113,35 +115,39 @@ begin
         end case;
       elsif isok = '0' then
         state <= not state;
-        if condition = "0000" then
-          addr <= flashpc;
-          condition <= "0001";
-        elsif condition = "0001" then
-          ctl_read <= not ctl_read;
-          condition <= "0010";
-        elsif condition = "0010" then
-          flashdata <= data_out;
-          flashpc <= flashpc+1;
-          condition <= "0011";
-        elsif condition = "0011" then
-          Ram2Addr <= addr2pc;	
-          condition <= "0100";
-        elsif condition = "0100" then
-          Ram2Data <= flashdata;
-          condition <= "0101";
-        elsif condition = "0101" then
-          Ram2WE <= '0';
-          condition <= "0110";
-        elsif condition = "0110" then
-          Ram2WE <= '1';
-          condition <="0111";
-        elsif condition = "0111" then
-          addr2pc <= addr2pc+1;
-          flashnum <= flashnum+1;
-          condition <= "0000";
-        end if;
-        if flashnum > x"4300" then
-          isok <= '1';
+        if state = '0' then
+          
+          if condition = "0000" then
+            addr <= flashpc;
+            condition <= "0001";
+          elsif condition = "0001" then
+            ctl_read <= not ctl_read;
+            condition <= "0010";
+          elsif condition = "0010" then
+            flashdata <= data_out;
+            flashpc <= flashpc+1;
+            condition <= "0011";
+          elsif condition = "0011" then
+            Ram2Addr <= addr2pc;	
+            condition <= "0100";
+          elsif condition = "0100" then
+            Ram2Data <= flashdata;
+            condition <= "0101";
+          elsif condition = "0101" then
+            Ram2WE <= '0';
+            condition <= "0110";
+          elsif condition = "0110" then
+            Ram2WE <= '1';
+            condition <="0111";
+          elsif condition = "0111" then
+            addr2pc <= addr2pc+1;
+            flashnum <= flashnum+1;
+            condition <= "0000";
+          end if;
+          if flashnum > x"4300" then
+            isok <= '1';
+          end if;
+          
         end if;
       end if;
     end if;

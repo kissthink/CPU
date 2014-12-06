@@ -204,6 +204,12 @@ architecture CPU_Arch of CPU is
       tsre      : in    std_logic;
       dready    : in    std_logic;
       ComSig    : out   std_logic_vector(1 downto 0);
+      com_r     : out   std_logic;
+      com_w     : out   std_logic;
+      com_rs    : out   std_logic_vector(1 downto 0);
+      com_ws    : out   std_logic_vector(1 downto 0);
+      dm_s      : out   std_logic;
+      PauseSig  : out   std_logic;
       MemOutput : out   std_logic_vector(15 downto 0)
       );
   end component;
@@ -221,11 +227,15 @@ architecture CPU_Arch of CPU is
   end component;
 
 
+  signal com_r, com_w, dm_s : std_logic := '0';
+  signal com_rs, com_ws : std_logic_vector(1 downto 0) := "00";
   signal ComSig : std_logic_vector(1 downto 0) := "11";
+  signal PauseSig : std_logic := '0';
   signal IMReady : std_logic := '0';
   signal clk25 : std_logic := '0';
   signal clk12 : std_logic := '0';
   signal IM_CLK : std_logic := '0';
+  signal DM_CLK : std_logic := '0';
   signal Double_CPU_CLK : std_logic := '0';
   signal CPU_CLK : std_logic := '0';
   signal R0 : std_logic_vector(15 downto 0) := (others => '0');
@@ -331,7 +341,7 @@ begin  -- CPU_Arch
             PC_New when input = X"0003" else
             IF_ID_PC_1 when input = X"0004" else
             IF_ID_Instruc when input = X"0005" else
---            IF_ID_Instruc_tmp when input = X"0006" else
+            com_r & com_w & "00" & com_rs & com_ws & "0000" & dm_s & "00" & PauseSig when input = X"0006" else
 
             ID_EX_RegWrite_Clear & ID_EX_MemRead_Clear & ID_EX_MemWrite_Clear & ID_EX_CmpCode_Clear & "111" & ID_EX_MemDataSrc & ID_EX_RegDataSrc  & "111" & ID_EX_BranchCtrl_Clear when input = X"1000" else
             ID_EX_ALU_Op & ID_EX_ALU_Src1 & ID_EX_ALU_Src2 & "0" & RegDst & '0' & ID_EX_RegDst when input = X"1001" else
@@ -382,18 +392,32 @@ begin  -- CPU_Arch
 
   clk12 <= not clk12 when rising_edge(clk25);
 
+  --Double_CPU_CLK <= clk12 when IMReady = '1' else
+  --                  '0';
+
+  --IM_CLK <= clk12;
+  
   Double_CPU_CLK <= clk12 when IMReady = '1' else
                     '0';
 
+  process (Double_CPU_CLK, PauseSig)
+  begin  -- process
+    if rising_edge(Double_CPU_CLK) then
+      if CPU_CLK = '1' or PauseSig = '0' then
+        CPU_CLK <= not CPU_CLK;
+      end if;
+    end if;
+  end process;
+  
   IM_CLK <= clk12;
+
+  DM_CLK <= clk12;
 
   --Double_CPU_CLK <= clk50 when IMReady = '1' else
   --                  '0';
   --IM_CLK <= clk50;
 
-
-  
-  CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
+--  CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
   -----------------------------------------------------------------------------
   -- Start / IF
@@ -726,6 +750,12 @@ begin  -- CPU_Arch
       tsre      => tsre,
       dready    => dready,
       ComSig    => ComSig,
+      com_r     => com_r,
+      com_w     => com_w,
+      com_rs    => com_rs,
+      com_ws    => com_ws,
+      dm_s      => dm_s,
+      PauseSig  => PauseSig,
       MemOutput => MEM_WB_MemOutput
       );
 
