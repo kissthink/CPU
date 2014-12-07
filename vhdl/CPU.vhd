@@ -221,6 +221,7 @@ architecture CPU_Arch of CPU is
   end component;
 
 
+  signal Rt_hold : std_logic_vector(15 downto 0) := (others => '0');
   signal ComSig : std_logic_vector(1 downto 0) := "11";
   signal IMReady : std_logic := '0';
   signal clk25 : std_logic := '0';
@@ -347,6 +348,7 @@ begin  -- CPU_Arch
             RegWrite & "000" & X"00" & Rd when input = X"100C" else
             ForwardB(16) & ForwardB(14 downto 0) when input = X"100D" else
             ID_EX_RxVal_Forward when input = X"100E" else
+            X"000" & "00" & ID_EX_CmpCode_Cache when input = X"1010" else
 
             operand1 when input = X"2000" else
             operand2 when input = X"2001" else
@@ -382,16 +384,14 @@ begin  -- CPU_Arch
 
   clk12 <= not clk12 when rising_edge(clk25);
 
-  --Double_CPU_CLK <= clk12 when IMReady = '1' else
-  --                  '0';
-
-  --IM_CLK <= clk12;
-
-  Double_CPU_CLK <= clk50 when IMReady = '1' else
+  Double_CPU_CLK <= clk12 when IMReady = '1' else
                     '0';
-  IM_CLK <= clk50;
 
+  IM_CLK <= clk12;
 
+  --Double_CPU_CLK <= clk50 when IMReady = '1' else
+  --                  '0';
+  --IM_CLK <= clk50;
   
   CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
@@ -561,8 +561,21 @@ begin  -- CPU_Arch
 
   ID_EX_CmpCode_Cache <= ID_EX_CmpCode_Clear when rising_edge(CPU_CLK);
 
-  Rt <= X"000" & "000" & not zero when ID_EX_CmpCode_Cache = "01" else
-        X"000" & "000" & neg when ID_EX_CmpCode_Cache = "10";
+  process (CPU_CLK)
+  begin  -- process
+    if falling_edge(CPU_CLK) then
+      case ID_EX_CmpCode_Cache is
+        when "01" =>
+          Rt <= X"000" & "000" & not zero;
+          Rt_hold <= X"000" & "000" & not zero;
+        when "10" =>
+          Rt <= X"000" & "000" & neg;
+          Rt_hold <= X"000" & "000" & neg;
+        when others =>
+          Rt <= Rt_hold;
+      end case;
+    end if;
+  end process;
   
   process (CPU_CLK)
   begin  -- process
