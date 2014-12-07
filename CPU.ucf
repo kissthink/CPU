@@ -2,7 +2,7 @@
 # PlanAhead Generated physical constraints 
 # not really 50M. single step for test.
 
-NET "clk50" LOC = B9;
+NET "clk50" LOC = U9;
 NET "rst" LOC = U10;
 NET "rdn" LOC = C14;
 NET "wrn" LOC = U5;

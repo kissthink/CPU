@@ -27,7 +27,8 @@ begin  -- PCUnit_Arch
 
   PC_Src <= GoBranch;
   Force_Nop <= GoBranch;
-  ID_EX_Clear <= GoBranch;
+--  ID_EX_Clear <= GoBranch;
+  ID_EX_Clear <= '0';
   
   process (CPU_CLK)
   begin  -- process

@@ -1,0 +1,19 @@
+	LI R1 0x55 					; R1 = 0x55
+	LI R5 0xFF					; R5 = -1
+	SLL R5 R5 0x0				; R5 = 0xFF00
+	ADDIU R5 0x82				; R5 = 0xFF82
+	LI R4 0x60					; R4 = 0x0060
+	ADDU R1 R1 R2				; R2 = 2 * R1 = 0xAA
+	ADDU R2 R1 R3				; R3 = R2 + R1 = 0xFF
+	SUBU R3 R2 R2				; R2 = R3 - R2 = 0x55
+	CMP R1 R2					; T = 0
+	ADDU R2 R3 R2				
+	BEQZ R4 0x3
+	ADDIU R4 0x1
+	BTEQZ 0xF8
+	NOP
+	ADDIU R5 0x1
+	BNEZ R5 0xF4
+	NOP
+	JR R7
+	NOP

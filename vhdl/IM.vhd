@@ -40,7 +40,7 @@ architecture Behavioral of IM is
 	signal none : std_logic_vector(15 downto 0);
 	signal ctl_read : std_logic;
 	signal nothing : std_logic;
-    signal isok : std_logic := '0';
+    signal isok : std_logic := '1';
   
 	component FlashIO
       port ( 
@@ -95,7 +95,7 @@ begin
       Ram2WE <= '1';
       Ram2EN <= '0';
       state <= '0';
-      isok <= '0';
+      isok <= '1';
       flashnum <= (others => '0');
     elsif clk50'event and clk50 = '1' then
       if isok = '1' then
@@ -140,7 +140,7 @@ begin
           flashnum <= flashnum+1;
           condition <= "0000";
         end if;
-        if flashnum > x"4300" then
+        if flashnum > x"6000" then
           isok <= '1';
         end if;
       end if;

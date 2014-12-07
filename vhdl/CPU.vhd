@@ -382,14 +382,14 @@ begin  -- CPU_Arch
 
   clk12 <= not clk12 when rising_edge(clk25);
 
-  Double_CPU_CLK <= clk12 when IMReady = '1' else
-                    '0';
-
-  IM_CLK <= clk12;
-
-  --Double_CPU_CLK <= clk50 when IMReady = '1' else
+  --Double_CPU_CLK <= clk12 when IMReady = '1' else
   --                  '0';
-  --IM_CLK <= clk50;
+
+  --IM_CLK <= clk12;
+
+  Double_CPU_CLK <= clk50 when IMReady = '1' else
+                    '0';
+  IM_CLK <= clk50;
 
 
   
