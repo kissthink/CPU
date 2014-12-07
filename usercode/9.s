@@ -1,0 +1,20 @@
+		NOP
+		NOP
+		
+		MFPC R6
+		ADDIU R6 0x000A
+		ADDSP 0xFFFF
+		SW_SP R6 0x0000
+		NOP
+		
+		LI R6 0x007E
+		ADDSP 0xFFFF
+		SW_SP R6 0x0000
+		NOP
+		
+		INT 0x000E
+		
+		NOP
+		NOP
+		JR R7
+		NOP

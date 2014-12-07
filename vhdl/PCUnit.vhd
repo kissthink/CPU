@@ -61,6 +61,9 @@ begin  -- PCUnit_Arch
           else
             GoBranch <= '0';
           end if;
+        when "110" =>
+          PC_New <= X"0006";
+          GoBranch <= '1';
         when others =>                  -- Not B/J
           GoBranch <= '0';
       end case;

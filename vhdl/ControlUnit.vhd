@@ -131,6 +131,10 @@ begin  -- ControlUnit_Arch
             output <= "0001" & "000" & "000010" & "00111" & "100";
           when "01010" =>                 -- SLTI
             output <= "0010" & "000" & "000010" & "00111" & "100";
+          when "11111" =>
+            if instruc(10 downto 4) = "0000000" then
+              output <= "0000" & "000" & "110000" & "00000" & "000";
+            end if;
           when others =>
             output <= (others => '0');
         end case;
