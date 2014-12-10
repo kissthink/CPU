@@ -56,7 +56,7 @@ architecture CPU_Arch of CPU is
       Ram2Data  : inout std_logic_vector(15 downto 0);
       Ram2Addr  : out std_logic_vector(17 downto 0);			  
       Ram2OE, Ram2WE, Ram2EN : out std_logic;
-      flash_byte : out std_logic;--BYTE#
+      flash_byte : out std_logic;
       flash_vpen : out std_logic;
       flash_ce : out std_logic;
       flash_oe : out std_logic;
@@ -242,14 +242,12 @@ architecture CPU_Arch of CPU is
   signal Rih : std_logic_vector(15 downto 0) := (others => '0');
   
   signal PC : std_logic_vector(15 downto 0) := X"FFFF";
---  signal PC_tmp : std_logic_vector(15 downto 0) := X"FFFF";
   signal PC_Predict : std_logic_vector(15 downto 0) := X"0000";
   signal PC_1 : std_logic_vector(15 downto 0) := X"0000";
   signal PC_Src : std_logic := '0';
   signal PC_New : std_logic_vector(15 downto 0) := X"0000";
   signal IF_ID_PC_1 : std_logic_vector(15 downto 0) := X"0000";
   signal IF_ID_Instruc : std_logic_vector(15 downto 0) := X"0800";
---  signal IF_ID_Instruc_tmp : std_logic_vector(15 downto 0) := X"0800";
   signal IF_ID_Keep : std_logic := '0';
 
   signal RegWrite : std_logic := '0';
@@ -306,9 +304,7 @@ architecture CPU_Arch of CPU is
   signal EX_MEM_MemWrite : std_logic := '0';
   signal EX_MEM_Rx : std_logic_vector(2 downto 0) := "000";
   signal EX_MEM_Ry : std_logic_vector(2 downto 0) := "000";
-  -- refresh immediately
   signal EX_MEM_RxVal : std_logic_vector(15 downto 0) := (others => '0');
-  -- refresh immediately
   signal EX_MEM_RyVal : std_logic_vector(15 downto 0) := (others => '0');
   signal EX_MEM_Rd : std_logic_vector(3 downto 0) := (others => '0');
 
@@ -332,7 +328,6 @@ begin  -- CPU_Arch
             PC_New when input = X"0003" else
             IF_ID_PC_1 when input = X"0004" else
             IF_ID_Instruc when input = X"0005" else
---            IF_ID_Instruc_tmp when input = X"0006" else
 
             ID_EX_RegWrite_Clear & ID_EX_MemRead_Clear & ID_EX_MemWrite_Clear & ID_EX_CmpCode_Clear & "111" & ID_EX_MemDataSrc & ID_EX_RegDataSrc  & "111" & ID_EX_BranchCtrl_Clear when input = X"1000" else
             ID_EX_ALU_Op & ID_EX_ALU_Src1 & ID_EX_ALU_Src2 & "0" & RegDst & '0' & ID_EX_RegDst when input = X"1001" else
@@ -386,13 +381,8 @@ begin  -- CPU_Arch
 
   Double_CPU_CLK <= clk12 when IMReady = '1' else
                     '0';
-
   IM_CLK <= clk12;
 
-  --Double_CPU_CLK <= clk50 when IMReady = '1' else
-  --                  '0';
-  --IM_CLK <= clk50;
-  
   CPU_CLK <= not CPU_CLK when rising_edge(Double_CPU_CLK);
 
   -----------------------------------------------------------------------------
@@ -441,6 +431,7 @@ begin  -- CPU_Arch
       flash_addr  => flash_addr,
       flash_data  => flash_data
       );
+  
   -----------------------------------------------------------------------------
   -- IF / ID
   -----------------------------------------------------------------------------
@@ -477,7 +468,8 @@ begin  -- CPU_Arch
       Ry_in    => IF_ID_Instruc(7 downto 5),
       Rd       => Rd,
       wData    => wData,
-
+      
+      -- Debug infomation.
       R0_out   => R0,
       R1_out   => R1,
       R2_out   => R2,
